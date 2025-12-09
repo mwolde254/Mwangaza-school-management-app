@@ -108,10 +108,10 @@ export interface FinanceTransaction {
   studentId: string;
   studentName: string;
   amount: number;
-  type: 'TUITION' | 'LUNCH' | 'TRANSPORT' | 'UNIFORM' | 'TRIP';
+  type: 'TUITION' | 'LUNCH' | 'TRANSPORT' | 'UNIFORM' | 'TRIP' | 'EVENT';
   date: string;
   status: 'PAID' | 'PENDING';
-  method: 'MPESA' | 'BANK' | 'CASH';
+  method: 'MPESA' | 'BANK' | 'CASH' | 'CARD';
 }
 
 export interface Competency {

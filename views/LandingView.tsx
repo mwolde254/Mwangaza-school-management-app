@@ -1,216 +1,620 @@
 
-import React, { useState } from 'react';
-import { Gavel, BookOpen, Home, ChevronLeft, LogIn, UserPlus, Settings, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Gavel, BookOpen, Home, ChevronLeft, LogIn, UserPlus, Settings, Sparkles, CheckCircle2, TrendingUp, Shield, MessageCircle, Menu, X, ArrowRight, Quote, Phone, Mail, LayoutDashboard, Smartphone, Check, ChevronDown } from 'lucide-react';
 import { UserRole } from '../types';
 import AdmissionsWizard from '../components/AdmissionsWizard';
+import { db } from '../services/db';
 
 interface LandingViewProps {
   onLoginSelect: (role: UserRole) => void;
   onSignupSelect: () => void;
 }
 
-const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect }) => {
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
-  const [showWizard, setShowWizard] = useState(false);
+// --- SUB-COMPONENTS ---
 
-  // Configuration for each role card strictly following DLS
+const MwangazaLogo = ({ className = "w-10 h-10" }: { className?: string }) => (
+  <div className={`${className} transition-transform duration-500 hover:scale-110 hover:rotate-12`}>
+    <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="22" stroke="currentColor" strokeWidth="9" />
+        <path d="M50 5V18 M50 82V95 M5 50H18 M82 50H95 M18.18 18.18L27.37 27.37 M72.63 72.63L81.82 81.82 M18.18 81.82L27.37 72.63 M72.63 27.37L81.82 18.18" stroke="currentColor" strokeWidth="9" strokeLinecap="round" />
+    </svg>
+  </div>
+);
+
+const Navbar = ({ onLoginClick }: { onLoginClick: () => void }) => {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const NavItem = ({ title, href, subItems }: { title: string, href: string, subItems: string[] }) => (
+    <div className="relative group">
+      <a 
+        href={href} 
+        className="flex items-center gap-1 text-sm font-bold text-gray-600 hover:text-brand-blue transition-colors py-2"
+      >
+        {title}
+        <ChevronDown size={14} className="transition-transform duration-300 group-hover:-rotate-180 text-gray-400 group-hover:text-brand-blue" />
+      </a>
+      
+      {/* Dropdown with hover bridge */}
+      <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-4 group-hover:translate-y-0 z-50">
+         <div className="absolute -top-2 left-0 w-full h-4 bg-transparent"></div>
+         <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-xl border border-gray-100 p-1.5 ring-1 ring-black/5 overflow-hidden">
+            {subItems.map((item, idx) => (
+               <a 
+                 key={idx} 
+                 href="#" 
+                 className="block px-4 py-2.5 text-xs font-bold text-gray-600 hover:bg-brand-blue/5 hover:text-brand-blue rounded-lg transition-colors"
+               >
+                  {item}
+               </a>
+            ))}
+         </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white/90 backdrop-blur-md shadow-sm py-3' : 'bg-transparent py-5'}`}>
+      <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
+        {/* Logo */}
+        <div className="flex items-center gap-3">
+          <div className="text-brand-blue">
+             <MwangazaLogo className="w-10 h-10" />
+          </div>
+          <span className={`font-display font-extrabold text-2xl tracking-tight ${isScrolled ? 'text-brand-blue' : 'text-brand-blue'}`}>Mwangaza</span>
+        </div>
+
+        {/* Desktop Links */}
+        <div className="hidden md:flex items-center gap-8">
+           <NavItem 
+             title="Features" 
+             href="#features" 
+             subItems={['Academics & CBC', 'Financial Management', 'Transport System', 'Communication Hub']} 
+           />
+           <NavItem 
+             title="Community" 
+             href="#testimonials" 
+             subItems={['Testimonials', 'Success Stories', 'Partner Schools', 'Events Gallery']} 
+           />
+           <NavItem 
+             title="About" 
+             href="#" 
+             subItems={['Our Mission', 'Leadership Team', 'Careers', 'Contact Support']} 
+           />
+        </div>
+
+        {/* CTA */}
+        <div className="hidden md:block">
+          <button 
+            onClick={onLoginClick}
+            className="px-6 py-2.5 bg-brand-blue text-white font-bold rounded-full shadow-lg shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all transform hover:-translate-y-0.5 flex items-center gap-2 text-sm"
+          >
+            <LogIn size={16}/> Login
+          </button>
+        </div>
+
+        {/* Mobile Toggle */}
+        <button className="md:hidden text-gray-600" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          {mobileMenuOpen ? <X size={24}/> : <Menu size={24}/>}
+        </button>
+      </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="absolute top-full left-0 right-0 bg-white border-t border-gray-100 p-6 shadow-xl md:hidden animate-slide-up">
+          <div className="flex flex-col gap-4">
+            {['Features', 'Community', 'About'].map(link => (
+              <a key={link} href={`#${link.toLowerCase()}`} className="text-lg font-bold text-gray-800" onClick={() => setMobileMenuOpen(false)}>
+                {link}
+              </a>
+            ))}
+            <button 
+              onClick={() => { onLoginClick(); setMobileMenuOpen(false); }}
+              className="w-full py-3 bg-brand-blue text-white font-bold rounded-xl mt-2"
+            >
+              Portal Login
+            </button>
+          </div>
+        </div>
+      )}
+    </nav>
+  );
+};
+
+const FeatureCard = ({ icon: Icon, title, desc }: { icon: any, title: string, desc: string }) => (
+  <div className="p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-brand-sky/30 transition-all group">
+    <div className="w-12 h-12 bg-brand-grey rounded-xl flex items-center justify-center text-brand-blue mb-4 group-hover:bg-brand-blue group-hover:text-white transition-colors">
+      <Icon size={24} />
+    </div>
+    <h3 className="font-display font-bold text-xl text-gray-800 mb-2">{title}</h3>
+    <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
+  </div>
+);
+
+const StatItem = ({ value, label }: { value: string, label: string }) => (
+  <div className="text-center px-4">
+    <p className="text-4xl font-display font-extrabold text-white mb-1">{value}</p>
+    <p className="text-blue-200 text-xs font-bold uppercase tracking-wider">{label}</p>
+  </div>
+);
+
+const TestimonialCard = ({ quote, author, role }: { quote: string, author: string, role: string }) => (
+  <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative">
+    <Quote size={40} className="text-brand-yellow/20 absolute top-6 right-6" />
+    <p className="text-gray-600 italic mb-6 relative z-10">"{quote}"</p>
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 bg-brand-grey rounded-full flex items-center justify-center font-bold text-brand-blue">
+        {author[0]}
+      </div>
+      <div>
+        <p className="font-bold text-gray-800 text-sm">{author}</p>
+        <p className="text-xs text-brand-sky font-bold uppercase">{role}</p>
+      </div>
+    </div>
+  </div>
+);
+
+// --- MODALS ---
+
+const LoginSelectionModal = ({ isOpen, onClose, onSelect }: { isOpen: boolean; onClose: () => void; onSelect: (role: UserRole) => void }) => {
+  if (!isOpen) return null;
+
   const roles = [
-    {
-      id: UserRole.ADMIN,
-      title: 'System Admin',
-      icon: Settings,
-      color: 'text-brand-blue',
-      borderColor: 'border-brand-blue',
-      bgHover: 'group-hover:bg-brand-blue/5',
-      desc: 'Full access to finance, users, and system configuration.'
-    },
-    {
-      id: UserRole.PRINCIPAL,
-      title: 'School Principal',
-      icon: Gavel,
-      color: 'text-brand-blue',
-      borderColor: 'border-brand-blue',
-      bgHover: 'group-hover:bg-brand-blue/5',
-      desc: 'Executive oversight, reporting, and critical approvals.'
-    },
-    {
-      id: UserRole.TEACHER,
-      title: 'Class Teacher',
-      icon: BookOpen,
-      color: 'text-brand-green',
-      borderColor: 'border-brand-green',
-      bgHover: 'group-hover:bg-brand-green/5',
-      desc: 'Daily attendance, grading, and competency recording.'
-    },
-    {
-      id: UserRole.PARENT,
-      title: 'Parent/Guardian',
-      icon: Home,
-      color: 'text-brand-sky',
-      borderColor: 'border-brand-sky',
-      bgHover: 'group-hover:bg-brand-sky/5',
-      desc: "Track child's progress, fees, and communication."
-    }
+    { id: UserRole.ADMIN, title: 'System Admin', icon: Settings, color: 'text-brand-blue', desc: 'Configuration' },
+    { id: UserRole.PRINCIPAL, title: 'Principal', icon: Gavel, color: 'text-brand-blue', desc: 'Management' },
+    { id: UserRole.TEACHER, title: 'Teacher', icon: BookOpen, color: 'text-brand-green', desc: 'Classroom' },
+    { id: UserRole.PARENT, title: 'Parent', icon: Home, color: 'text-brand-sky', desc: 'Family' }
   ];
 
-  const activeRoleConfig = roles.find(r => r.id === selectedRole);
+  return (
+    <div className="fixed inset-0 bg-brand-blue/20 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl relative animate-slide-up border border-gray-100">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 rounded-full p-1 transition-colors hover:bg-gray-100">
+          <X size={20} />
+        </button>
+        
+        <div className="text-center mb-8">
+          <h2 className="font-display font-bold text-2xl text-gray-800">Welcome Back</h2>
+          <p className="text-gray-500 text-sm">Select your portal to continue</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          {roles.map((role) => (
+            <button
+              key={role.id}
+              onClick={() => { onSelect(role.id); onClose(); }}
+              className="group flex flex-col items-center justify-center text-center bg-gray-50 hover:bg-white rounded-xl p-4 border border-gray-200 hover:border-brand-blue/30 hover:shadow-lg transition-all duration-300"
+            >
+              <div className={`mb-3 p-3 rounded-full bg-white shadow-sm group-hover:bg-brand-blue/5 transition-colors`}>
+                <role.icon size={24} className={role.color} />
+              </div>
+              <h3 className="font-display font-bold text-sm text-gray-800 mb-1">{role.title}</h3>
+              <p className="text-[10px] text-gray-400">{role.desc}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const LeadCaptureModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  const [formData, setFormData] = useState({ name: '', email: '', schoolSize: '100-300 Students' });
+  const [status, setStatus] = useState<'IDLE' | 'SUCCESS'>('IDLE');
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name || !formData.email) return;
+
+    await db.collection('admissions_leads').add({
+      ...formData,
+      leadDate: new Date().toISOString()
+    });
+
+    setStatus('SUCCESS');
+    setTimeout(() => {
+      onClose();
+      setStatus('IDLE');
+      setFormData({ name: '', email: '', schoolSize: '100-300 Students' });
+    }, 2500);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-white/70 backdrop-blur-md rounded-xl p-8 w-full max-w-md shadow-2xl relative animate-slide-up border border-white/50">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 rounded-full p-1 transition-colors hover:bg-white/50">
+          <X size={20} />
+        </button>
+
+        {status === 'SUCCESS' ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="w-16 h-16 bg-brand-green/20 rounded-full flex items-center justify-center text-brand-green mb-4">
+              <Check size={32} />
+            </div>
+            <h3 className="font-display font-bold text-2xl text-gray-800 mb-2">Thank You!</h3>
+            <p className="text-gray-600">We will be in touch shortly.</p>
+          </div>
+        ) : (
+          <>
+            <div className="mb-6">
+              <h2 className="font-display font-bold text-2xl text-brand-blue mb-1">Get Started</h2>
+              <p className="text-gray-600 text-sm">Transform your school management today.</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Full Name</label>
+                <input 
+                  type="text" 
+                  required
+                  className="w-full h-12 px-4 rounded-md border border-gray-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none bg-white/80"
+                  placeholder="e.g. Jane Doe"
+                  value={formData.name}
+                  onChange={e => setFormData({...formData, name: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Work Email Address</label>
+                <input 
+                  type="email" 
+                  required
+                  className="w-full h-12 px-4 rounded-md border border-gray-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none bg-white/80"
+                  placeholder="name@school.com"
+                  value={formData.email}
+                  onChange={e => setFormData({...formData, email: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">School Size</label>
+                <select 
+                  className="w-full h-12 px-4 rounded-md border border-gray-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none bg-white/80"
+                  value={formData.schoolSize}
+                  onChange={e => setFormData({...formData, schoolSize: e.target.value})}
+                >
+                  <option>100-300 Students</option>
+                  <option>301-800 Students</option>
+                  <option>800+ Students</option>
+                </select>
+              </div>
+
+              <button 
+                type="submit" 
+                className="w-full h-12 bg-[#1E3A8A] text-white rounded-xl font-bold shadow-lg hover:bg-brand-blue/90 transition-all mt-4"
+              >
+                Get Started
+              </button>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// --- MAIN PAGE COMPONENT ---
+
+const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect }) => {
+  const [showWizard, setShowWizard] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showLeadModal, setShowLeadModal] = useState(false);
 
   if (showWizard) {
       return <AdmissionsWizard onExit={() => setShowWizard(false)} />;
   }
 
   return (
-    <div className="min-h-screen bg-brand-grey flex flex-col items-center justify-center p-6 relative">
-      
-      <div className="w-full max-w-6xl z-10 flex flex-col gap-8">
-        
-        {/* BRAND HERO SECTION */}
-        <div className="w-full bg-gradient-to-br from-brand-blue to-blue-950 rounded-[32px] p-12 text-center shadow-2xl relative overflow-hidden flex flex-col items-center animate-slide-up">
+    <div className="min-h-screen bg-white font-sans text-gray-800 scroll-smooth">
+      <Navbar onLoginClick={() => setShowLoginModal(true)} />
+
+      {/* HERO SECTION */}
+      <section className="relative pt-32 pb-20 lg:pt-40 lg:pb-32 overflow-hidden bg-gradient-to-b from-brand-grey to-white" id="hero-portal">
+        {/* Background Decor */}
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-brand-blue/5 skew-x-12 transform origin-top-right pointer-events-none"></div>
+        <div className="absolute top-20 left-10 w-64 h-64 bg-brand-yellow/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
+          
+          {/* Left: Content */}
+          <div className="text-center lg:text-left space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-brand-blue/20 rounded-full text-brand-blue text-xs font-bold shadow-sm animate-fade-in">
+              <Sparkles size={14} className="text-brand-yellow fill-brand-yellow"/>
+              <span>New: CBC Assessment Modules Available</span>
+            </div>
             
-            {/* Decorative Geometric Background */}
-            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">
-                <svg className="absolute -top-20 -left-20 w-96 h-96 text-white" viewBox="0 0 200 200" fill="currentColor">
-                    <circle cx="100" cy="100" r="100" />
-                </svg>
-                <svg className="absolute -bottom-40 -right-20 w-[500px] h-[500px] text-white" viewBox="0 0 200 200" fill="currentColor">
-                    <rect x="0" y="0" width="200" height="200" rx="40" transform="rotate(45 100 100)" />
-                </svg>
-            </div>
+            <h1 className="text-5xl lg:text-6xl font-display font-extrabold text-gray-900 leading-[1.1] tracking-tight">
+              The Future of <br/>
+              <span className="text-brand-blue">Kenyan Education</span>
+            </h1>
+            
+            <p className="text-lg text-gray-600 max-w-xl mx-auto lg:mx-0 leading-relaxed font-sans">
+              Mwangaza bridges the gap between school, teachers, and parents. 
+              Seamless CBC reporting, real-time fee tracking, and instant communication in one secure platform.
+            </p>
 
-            {/* Logo & Identity Content */}
-            <div className="relative z-10 flex flex-col items-center">
-                {/* Illuminated M Logo SVG */}
-                <div className="mb-6 transform hover:scale-105 transition-transform duration-500">
-                    <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        {/* The M Shape */}
-                        <path 
-                            d="M 15 85 L 15 25 L 50 65 L 85 25 L 85 85" 
-                            stroke="white" 
-                            strokeWidth="6" 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round"
-                        />
-                        {/* The Floating Sun in the Valley */}
-                        <circle cx="50" cy="35" r="5" fill="white" />
-                        {/* Radiating Rays */}
-                        <line x1="50" y1="25" x2="50" y2="10" stroke="white" strokeWidth="3" strokeLinecap="round" />
-                        <line x1="38" y1="28" x2="28" y2="18" stroke="white" strokeWidth="3" strokeLinecap="round" />
-                        <line x1="62" y1="28" x2="72" y2="18" stroke="white" strokeWidth="3" strokeLinecap="round" />
-                    </svg>
-                </div>
-
-                <h1 className="text-6xl font-display font-extrabold text-white mb-2 tracking-tight drop-shadow-md">
-                    Mwangaza
-                </h1>
-                <p className="text-blue-100 font-sans text-xl mb-10 font-medium tracking-wide opacity-90">
-                    Education Management System
-                </p>
-
-                {/* Primary CTA */}
-                <button 
-                    onClick={() => setShowWizard(true)}
-                    className="px-8 py-4 bg-white text-brand-blue font-bold rounded-full shadow-lg hover:shadow-2xl hover:bg-blue-50 transform hover:-translate-y-1 transition-all flex items-center gap-3 text-lg group"
-                >
-                    <Sparkles size={20} className="text-brand-yellow fill-brand-yellow group-hover:rotate-12 transition-transform"/> 
-                    <span>New Student? Apply Now</span>
-                </button>
-            </div>
-        </div>
-
-        {!selectedRole ? (
-          /* ROLE SELECTION GRID */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-slide-up">
-            {roles.map((role) => (
-              <button
-                key={role.id}
-                onClick={() => setSelectedRole(role.id)}
-                className={`
-                  group h-full flex flex-col text-left
-                  bg-brand-card rounded-[24px] p-8
-                  shadow-sm hover:shadow-xl hover:shadow-brand-blue/5
-                  transition-all duration-300 transform hover:-translate-y-1 
-                  border border-transparent hover:border-gray-100
-                  relative overflow-hidden
-                `}
+            <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start pt-4">
+              <button 
+                onClick={() => setShowLeadModal(true)}
+                className="px-8 py-4 bg-[#1E3A8A] text-white font-bold rounded-xl shadow-xl shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all hover:-translate-y-1 flex items-center gap-2"
               >
-                {/* Accent Top Line (Hover) */}
-                <div className={`absolute top-0 left-0 w-full h-1 bg-current ${role.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
-
-                {/* Icon Container */}
-                <div className={`
-                  mb-6 p-4 rounded-2xl w-16 h-16 
-                  flex items-center justify-center 
-                  bg-brand-grey/50 ${role.bgHover} 
-                  transition-colors duration-300
-                `}>
-                  <role.icon size={32} className={`${role.color}`} strokeWidth={1.5} />
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 flex flex-col">
-                  <h3 className="font-display font-bold text-xl text-gray-800 mb-2 group-hover:text-brand-blue transition-colors">
-                    {role.title}
-                  </h3>
-                  <p className="font-sans text-sm text-gray-500 leading-relaxed">
-                    {role.desc}
-                  </p>
-                </div>
+                Try Mwangaza <ArrowRight size={18}/>
               </button>
-            ))}
-          </div>
-        ) : (
-          /* AUTH CHOICE VIEW (Login/Signup) */
-          <div className="max-w-md mx-auto w-full animate-fade-in">
-            <button 
-              onClick={() => setSelectedRole(null)} 
-              className="mb-6 flex items-center gap-2 text-gray-400 hover:text-brand-blue transition-colors text-sm font-bold uppercase tracking-wide group mx-auto"
-            >
-              <div className="p-1 rounded-full bg-white group-hover:bg-brand-blue group-hover:text-white transition-colors shadow-sm">
-                 <ChevronLeft size={16} />
-              </div>
-              Back to Roles
-            </button>
+              <a href="#features" className="px-8 py-4 bg-white text-gray-700 font-bold rounded-xl shadow-sm border border-gray-200 hover:border-brand-blue hover:text-brand-blue transition-all">
+                Learn More
+              </a>
+            </div>
 
-            <div className="bg-white rounded-[24px] shadow-xl border border-gray-100 p-8 text-center relative overflow-hidden">
-              {/* Top Accent */}
-              <div className={`absolute top-0 left-0 w-full h-2 bg-current ${activeRoleConfig?.color}`}></div>
-
-              <div className={`mx-auto w-24 h-24 rounded-full bg-brand-grey flex items-center justify-center mb-6 border-4 border-white shadow-sm`}>
-                 {activeRoleConfig && <activeRoleConfig.icon size={48} className={activeRoleConfig.color} strokeWidth={1.5} />}
-              </div>
-              
-              <h2 className="font-display font-bold text-2xl text-gray-800 mb-2">{activeRoleConfig?.title}</h2>
-              <p className="text-gray-500 font-sans text-sm mb-8 leading-relaxed px-4">
-                Welcome back. Please select how you would like to proceed.
-              </p>
-              
-              <div className="space-y-4">
-                {/* Primary Action: Log In */}
-                <button 
-                  onClick={() => onLoginSelect(selectedRole)}
-                  className="w-full h-14 bg-brand-blue text-white rounded-[16px] font-sans font-bold text-sm shadow-lg shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all flex items-center justify-center gap-2 focus:ring-4 focus:ring-brand-sky/30 hover:-translate-y-0.5"
-                >
-                  <LogIn size={18} /> Log In
-                </button>
-                
-                {/* Secondary Action: Create Account */}
-                <button 
-                  onClick={onSignupSelect}
-                  className="w-full h-14 bg-white border-2 border-gray-100 text-gray-700 rounded-[16px] font-sans font-bold text-sm hover:border-brand-sky hover:text-brand-sky transition-all flex items-center justify-center gap-2 focus:ring-4 focus:ring-brand-sky/30 hover:-translate-y-0.5"
-                >
-                  <UserPlus size={18} /> Create Account
-                </button>
-              </div>
+            <div className="pt-8 flex items-center justify-center lg:justify-start gap-6 text-sm font-bold text-gray-400">
+               <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-brand-green"/> CBC Compliant</div>
+               <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-brand-green"/> Secure Data</div>
             </div>
           </div>
-        )}
 
+          {/* Right: Abstract Visualization (Replacing Portal Card) */}
+          <div className="relative flex justify-center lg:justify-end">
+             <div className="relative w-full max-w-lg">
+                <div className="absolute inset-0 bg-brand-blue rounded-[32px] rotate-3 opacity-10 scale-95 blur-xl"></div>
+                <div className="bg-white rounded-[24px] shadow-2xl border border-gray-100 p-2 overflow-hidden relative z-10 transform hover:scale-[1.02] transition-transform duration-700">
+                   <img 
+                     src="https://images.unsplash.com/photo-1531403009284-440f080d1e12?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" 
+                     alt="Mwangaza Dashboard Preview" 
+                     className="rounded-[20px] w-full h-auto object-cover"
+                   />
+                   <div className="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur-md p-4 rounded-xl shadow-lg border border-white/50 flex items-center gap-4 animate-slide-up">
+                      <div className="w-10 h-10 bg-brand-green/20 text-brand-green rounded-full flex items-center justify-center">
+                         <CheckCircle2 size={20} />
+                      </div>
+                      <div>
+                         <p className="text-xs font-bold text-gray-400 uppercase">Status</p>
+                         <p className="font-bold text-gray-800 text-sm">98% Attendance Recorded</p>
+                      </div>
+                   </div>
+                </div>
+             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* STATS STRIP */}
+      <div className="bg-brand-blue py-12 relative overflow-hidden">
+         {/* Background Patterns */}
+         <div className="absolute inset-0 opacity-10" style={{backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '20px 20px'}}></div>
+         
+         <div className="max-w-7xl mx-auto px-6 relative z-10 grid grid-cols-2 md:grid-cols-4 gap-8">
+            <StatItem value="1" label="Partner Schools" />
+            <StatItem value="150" label="Students Active" />
+            <StatItem value="98%" label="Attendance Rate" />
+            <StatItem value="24/7" label="System Uptime" />
+         </div>
       </div>
-      
-      {/* Footer */}
-      <div className="mt-12 text-center w-full text-xs text-gray-400 font-sans">
-        &copy; {new Date().getFullYear()} Mwangaza Education System. Secure & Encrypted.
-      </div>
+
+      {/* FEATURES SECTION (Icons) */}
+      <section className="py-24 bg-white" id="features">
+         <div className="max-w-7xl mx-auto px-6">
+            <div className="text-center max-w-3xl mx-auto mb-16">
+               <h2 className="text-brand-blue font-bold text-sm uppercase tracking-widest mb-3">Why Mwangaza?</h2>
+               <h3 className="font-display font-extrabold text-4xl text-gray-900 mb-6">Designed for the Modern CBC Curriculum</h3>
+               <p className="text-gray-500 leading-relaxed">
+                  We don't just digitalize grades; we transform the entire school experience. 
+                  From competence-based assessments to automated financial reconciliation.
+               </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+               <FeatureCard 
+                  icon={TrendingUp} 
+                  title="CBC Assessment Tracking" 
+                  desc="Effortlessly record and track learner competencies. Move beyond grades to holistic development tracking with visual analytics."
+               />
+               <FeatureCard 
+                  icon={Shield} 
+                  title="Secure & Private" 
+                  desc="Bank-level encryption for student data and payments. Role-based access ensures information is seen only by those authorized."
+               />
+               <FeatureCard 
+                  icon={MessageCircle} 
+                  title="Instant Communication" 
+                  desc="SMS blasts, email newsletters, and direct in-app messaging keep parents connected to their child's journey in real-time."
+               />
+            </div>
+         </div>
+      </section>
+
+      {/* VISUAL FEATURES SHOWCASE (New Section) */}
+      <section className="py-24 bg-gray-50 overflow-hidden border-t border-gray-100">
+        <div className="max-w-7xl mx-auto px-6 space-y-24">
+          
+          {/* Feature 1 */}
+          <div className="flex flex-col lg:flex-row items-center gap-16">
+            <div className="lg:w-1/2 space-y-6">
+              <div className="w-12 h-12 bg-brand-blue/10 rounded-2xl flex items-center justify-center text-brand-blue mb-4">
+                <LayoutDashboard size={24} />
+              </div>
+              <h3 className="text-4xl font-display font-extrabold text-gray-900">
+                Command Center for <span className="text-brand-blue">School Admins</span>
+              </h3>
+              <p className="text-lg text-gray-600 leading-relaxed">
+                Stop juggling spreadsheets. Our centralized dashboard gives you a 360-degree view of enrollment, attendance, and financial health in real-time. Make data-driven decisions effortlessly.
+              </p>
+              <ul className="space-y-3 pt-4">
+                {['Real-time Enrollment Stats', 'Staff Performance Metrics', 'Automated Daily Reports'].map(item => (
+                  <li key={item} className="flex items-center gap-3 text-gray-700 font-medium">
+                    <CheckCircle2 size={20} className="text-brand-green" /> {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="lg:w-1/2 relative">
+                <div className="absolute inset-0 bg-brand-blue/5 rounded-[32px] transform rotate-3 scale-95"></div>
+                <img 
+                  src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+                  alt="Admin Dashboard" 
+                  className="relative rounded-[32px] shadow-2xl border border-gray-100 z-10 hover:scale-[1.02] transition-transform duration-500 w-full object-cover h-80 lg:h-96"
+                />
+            </div>
+          </div>
+
+          {/* Feature 2 (Reversed) */}
+          <div className="flex flex-col lg:flex-row-reverse items-center gap-16">
+            <div className="lg:w-1/2 space-y-6">
+              <div className="w-12 h-12 bg-brand-yellow/10 rounded-2xl flex items-center justify-center text-brand-yellow-600 mb-4">
+                <Smartphone size={24} />
+              </div>
+              <h3 className="text-4xl font-display font-extrabold text-gray-900">
+                Parents are always <span className="text-brand-blue">in the loop</span>
+              </h3>
+              <p className="text-lg text-gray-600 leading-relaxed">
+                Bridge the communication gap. Parents receive instant notifications for arrival, departure, and academic progress directly on their phones.
+              </p>
+              <div className="grid grid-cols-2 gap-4 pt-4">
+                 <div className="p-4 bg-white rounded-xl shadow-sm border border-gray-100">
+                    <p className="font-bold text-gray-800 text-sm">SMS Alerts</p>
+                    <p className="text-xs text-gray-500">Instant fee reminders & updates</p>
+                 </div>
+                 <div className="p-4 bg-white rounded-xl shadow-sm border border-gray-100">
+                    <p className="font-bold text-gray-800 text-sm">Student Portal</p>
+                    <p className="text-xs text-gray-500">View grades & download reports</p>
+                 </div>
+              </div>
+            </div>
+            <div className="lg:w-1/2 relative">
+                <div className="absolute inset-0 bg-brand-yellow/10 rounded-[32px] transform -rotate-3 scale-95"></div>
+                <img 
+                  src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+                  alt="Parent Mobile App" 
+                  className="relative rounded-[32px] shadow-2xl border border-gray-100 z-10 hover:scale-[1.02] transition-transform duration-500 w-full object-cover h-80 lg:h-96"
+                />
+            </div>
+          </div>
+
+          {/* Feature 3 */}
+          <div className="flex flex-col lg:flex-row items-center gap-16">
+            <div className="lg:w-1/2 space-y-6">
+              <div className="w-12 h-12 bg-brand-green/10 rounded-2xl flex items-center justify-center text-brand-green mb-4">
+                <BookOpen size={24} />
+              </div>
+              <h3 className="text-4xl font-display font-extrabold text-gray-900">
+                CBC Assessment <span className="text-brand-blue">Made Simple</span>
+              </h3>
+              <p className="text-lg text-gray-600 leading-relaxed">
+                Fully compliant with the Competency Based Curriculum. Record observations, track learning strands, and generate colorful, easy-to-read reports for parents.
+              </p>
+              <button className="px-6 py-3 bg-white border-2 border-brand-grey text-gray-700 font-bold rounded-full hover:border-brand-green hover:text-brand-green transition-colors">
+                 View Sample Report
+              </button>
+            </div>
+            <div className="lg:w-1/2 relative">
+                <div className="absolute inset-0 bg-brand-green/10 rounded-[32px] transform rotate-2 scale-95"></div>
+                <img 
+                  src="https://images.unsplash.com/photo-1509062522246-3755977927d7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+                  alt="CBC Grading System" 
+                  className="relative rounded-[32px] shadow-2xl border border-gray-100 z-10 hover:scale-[1.02] transition-transform duration-500 w-full object-cover h-80 lg:h-96"
+                />
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* TESTIMONIALS */}
+      <section className="py-24 bg-brand-grey/50 border-t border-gray-200" id="testimonials">
+         <div className="max-w-7xl mx-auto px-6">
+            <h2 className="font-display font-extrabold text-3xl text-center text-gray-900 mb-16">Trusted by Educators & Parents</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+               <TestimonialCard 
+                  quote="Mwangaza has completely eliminated our paperwork. The CBC reports are generated instantly!"
+                  author="Mrs. J. Omondi"
+                  role="School Principal"
+               />
+               <TestimonialCard 
+                  quote="I love getting real-time updates when my son arrives at school. Peace of mind is priceless."
+                  author="David Kamau"
+                  role="Parent (Grade 4)"
+               />
+               <TestimonialCard 
+                  quote="Taking attendance and recording competencies is so fast now. I can focus on teaching."
+                  author="Tr. Sarah"
+                  role="Senior Teacher"
+               />
+            </div>
+         </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="bg-[#0f172a] text-white pt-20 pb-10">
+         <div className="max-w-7xl mx-auto px-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+               <div className="col-span-1 md:col-span-1">
+                  <div className="flex items-center gap-3 mb-6">
+                     <div className="text-white">
+                        <MwangazaLogo className="w-10 h-10" />
+                     </div>
+                     <span className="font-display font-bold text-2xl">Mwangaza</span>
+                  </div>
+                  <p className="text-gray-400 text-sm leading-relaxed mb-6">
+                     Empowering schools across Kenya with next-generation management tools.
+                  </p>
+                  <div className="flex gap-4">
+                     {/* Social placeholders */}
+                     <div className="w-8 h-8 bg-white/10 rounded-full hover:bg-brand-blue cursor-pointer transition-colors"></div>
+                     <div className="w-8 h-8 bg-white/10 rounded-full hover:bg-brand-blue cursor-pointer transition-colors"></div>
+                     <div className="w-8 h-8 bg-white/10 rounded-full hover:bg-brand-blue cursor-pointer transition-colors"></div>
+                  </div>
+               </div>
+
+               <div>
+                  <h4 className="font-bold text-lg mb-6">Product</h4>
+                  <ul className="space-y-4 text-gray-400 text-sm">
+                     <li><a href="#" className="hover:text-brand-sky transition-colors">Features</a></li>
+                     <li><a href="#" className="hover:text-brand-sky transition-colors">Pricing</a></li>
+                     <li><a href="#" className="hover:text-brand-sky transition-colors">CBC Resources</a></li>
+                     <li><a href="#" className="hover:text-brand-sky transition-colors">Case Studies</a></li>
+                  </ul>
+               </div>
+
+               <div>
+                  <h4 className="font-bold text-lg mb-6">Support</h4>
+                  <ul className="space-y-4 text-gray-400 text-sm">
+                     <li><a href="#" className="hover:text-brand-sky transition-colors">Help Center</a></li>
+                     <li><a href="#" className="hover:text-brand-sky transition-colors">Contact Us</a></li>
+                     <li><a href="#" className="hover:text-brand-sky transition-colors">System Status</a></li>
+                     <li><a href="#" className="hover:text-brand-sky transition-colors">Privacy Policy</a></li>
+                  </ul>
+               </div>
+
+               <div>
+                  <h4 className="font-bold text-lg mb-6">Contact</h4>
+                  <ul className="space-y-4 text-gray-400 text-sm">
+                     <li className="flex items-center gap-3"><Phone size={16} className="text-brand-sky"/> +254 700 123 456</li>
+                     <li className="flex items-center gap-3"><Mail size={16} className="text-brand-sky"/> hello@mwangaza.co.ke</li>
+                     <li className="flex items-start gap-3"><Home size={16} className="text-brand-sky mt-1"/> Westlands, Nairobi, Kenya</li>
+                  </ul>
+               </div>
+            </div>
+
+            <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+               <p className="text-gray-500 text-xs">
+                  &copy; {new Date().getFullYear()} Mwangaza Education Systems. All rights reserved.
+               </p>
+               <div className="flex gap-6 text-xs text-gray-500 font-bold">
+                  <a href="#" className="hover:text-white">Privacy</a>
+                  <a href="#" className="hover:text-white">Terms</a>
+                  <a href="#" className="hover:text-white">Cookies</a>
+               </div>
+            </div>
+         </div>
+      </footer>
+
+      {/* Modals */}
+      <LoginSelectionModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onSelect={onLoginSelect} />
+      <LeadCaptureModal isOpen={showLeadModal} onClose={() => setShowLeadModal(false)} />
     </div>
   );
 };
