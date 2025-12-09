@@ -4,6 +4,38 @@ import { Student, FinanceTransaction, AttendanceRecord, LeaveRequest, Competency
 // Simulating Firestore behavior with LocalStorage and Async delays
 const DELAY = 500;
 
+// --- OFFLINE SYNC TYPES & STORE ---
+export interface SyncItem {
+  id: string;
+  collection: string;
+  type: 'CREATE' | 'UPDATE' | 'DELETE';
+  payload: any;
+  docId?: string;
+  timestamp: number;
+}
+
+export const OfflineDB = {
+  getQueue: (): SyncItem[] => {
+    try {
+      return JSON.parse(localStorage.getItem('mwangaza_sync_queue') || '[]');
+    } catch { return []; }
+  },
+  addToQueue: (item: Omit<SyncItem, 'id' | 'timestamp'>) => {
+    const queue = OfflineDB.getQueue();
+    const newItem = { ...item, id: Math.random().toString(36).substr(2, 9), timestamp: Date.now() };
+    queue.push(newItem);
+    localStorage.setItem('mwangaza_sync_queue', JSON.stringify(queue));
+    return newItem;
+  },
+  removeFromQueue: (id: string) => {
+    const queue = OfflineDB.getQueue().filter(i => i.id !== id);
+    localStorage.setItem('mwangaza_sync_queue', JSON.stringify(queue));
+  },
+  clearQueue: () => {
+    localStorage.setItem('mwangaza_sync_queue', '[]');
+  }
+};
+
 // Initial Data
 const MOCK_USERS: UserProfile[] = [
   { 
@@ -246,11 +278,40 @@ const MOCK_TRANSPORT_LOGS: TransportLog[] = [
 ];
 
 // Helper to simulate DB
-const getCollection = <T>(key: string, defaults: T[]): T[] => {
-  const stored = localStorage.getItem(`mwangaza_${key}`);
-  if (stored) return JSON.parse(stored);
-  localStorage.setItem(`mwangaza_${key}`, JSON.stringify(defaults));
-  return defaults;
+const getCollection = <T>(path: string, defaults: T[]): T[] => {
+  const key = `mwangaza_${path}`;
+  const stored = localStorage.getItem(key);
+  let data = stored ? JSON.parse(stored) : defaults;
+  
+  // If first run, initialize
+  if (!stored) {
+    localStorage.setItem(key, JSON.stringify(defaults));
+  }
+
+  // --- MERGE OFFLINE QUEUE (OPTIMISTIC READ) ---
+  const syncQueue = OfflineDB.getQueue();
+  const pendingChanges = syncQueue.filter(item => item.collection === path);
+
+  if (pendingChanges.length > 0) {
+    // Clone to avoid mutating persisted state during render
+    let mergedData = [...data];
+    
+    pendingChanges.sort((a,b) => a.timestamp - b.timestamp).forEach(change => {
+      if (change.type === 'CREATE') {
+        mergedData.push(change.payload);
+      } else if (change.type === 'UPDATE') {
+        const index = mergedData.findIndex((d: any) => d.id === change.docId);
+        if (index > -1) {
+          mergedData[index] = { ...mergedData[index], ...change.payload };
+        }
+      } else if (change.type === 'DELETE') {
+        mergedData = mergedData.filter((d: any) => d.id !== change.docId);
+      }
+    });
+    return mergedData;
+  }
+
+  return data;
 };
 
 const setCollection = (key: string, data: any[]) => {
@@ -280,7 +341,6 @@ export const db = {
       if (path === 'transport_routes') return getCollection<TransportRoute>('transport_routes', MOCK_TRANSPORT_ROUTES);
       if (path === 'transport_vehicles') return getCollection<TransportVehicle>('transport_vehicles', MOCK_TRANSPORT_VEHICLES);
       if (path === 'transport_logs') return getCollection<TransportLog>('transport_logs', MOCK_TRANSPORT_LOGS);
-      // New Collections
       if (path === 'staff') return getCollection<StaffRecord>('staff', MOCK_STAFF);
       return [];
     },
@@ -363,11 +423,13 @@ export const db = {
     else if (path === 'transport_logs') defaultData = MOCK_TRANSPORT_LOGS;
     else if (path === 'staff') defaultData = MOCK_STAFF;
     
+    // Initial fetch
     const data = getCollection(path, defaultData);
     callback(data);
     
     const interval = setInterval(() => {
-      const freshData = getCollection(path, []);
+      // Re-fetch to capture updates, getCollection handles merging offline data
+      const freshData = getCollection(path, defaultData);
       callback(freshData);
     }, 2000); // Polling interval
     

@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { UserRole } from '../types';
-import { LayoutDashboard, Users, Settings, LogOut, Search, Bell, X, Camera, Phone, User as UserIcon, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, LogOut, Search, Bell, X, Camera, Phone, User as UserIcon, Check, ChevronLeft, ChevronRight, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { useStudentData } from '../context/StudentDataContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -15,7 +16,7 @@ const Layout: React.FC<LayoutProps> = ({ children, role, currentView, onNavigate
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const { students, notifications, markNotificationRead } = useStudentData();
+  const { students, notifications, markNotificationRead, connectionStatus, pendingChanges } = useStudentData();
   const { user, logout } = useAuth();
   
   // Filter notifications for current user
@@ -174,6 +175,26 @@ const Layout: React.FC<LayoutProps> = ({ children, role, currentView, onNavigate
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Connectivity Status Indicator */}
+            <div 
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                connectionStatus === 'ONLINE' ? 'bg-brand-green/10 text-brand-green border-brand-green/20' :
+                connectionStatus === 'SYNCING' ? 'bg-brand-yellow/10 text-brand-yellow-600 border-brand-yellow/30' :
+                'bg-brand-red/10 text-brand-red border-brand-red/20'
+              }`}
+              title={connectionStatus === 'OFFLINE' ? `${pendingChanges} changes pending sync` : 'System Online'}
+            >
+                {connectionStatus === 'ONLINE' && <Wifi size={14}/>}
+                {connectionStatus === 'OFFLINE' && <WifiOff size={14}/>}
+                {connectionStatus === 'SYNCING' && <RefreshCw size={14} className="animate-spin"/>}
+                
+                <span className="hidden sm:inline">
+                    {connectionStatus === 'ONLINE' ? 'Online' : 
+                     connectionStatus === 'SYNCING' ? 'Syncing...' : 
+                     `Offline (${pendingChanges})`}
+                </span>
+            </div>
+
             <div className="relative">
               <button 
                 onClick={() => setShowNotifications(!showNotifications)} 

@@ -21,7 +21,7 @@ const MwangazaLogo = ({ className = "w-10 h-10" }: { className?: string }) => (
   </div>
 );
 
-const Navbar = ({ onLoginClick }: { onLoginClick: () => void }) => {
+const Navbar = ({ onLoginClick, onRequestDemo }: { onLoginClick: () => void, onRequestDemo: () => void }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -90,7 +90,13 @@ const Navbar = ({ onLoginClick }: { onLoginClick: () => void }) => {
         </div>
 
         {/* CTA */}
-        <div className="hidden md:block">
+        <div className="hidden md:flex items-center gap-4">
+          <button 
+            onClick={onRequestDemo}
+            className="px-5 py-2.5 text-brand-blue font-bold hover:bg-brand-blue/5 rounded-full transition-all text-sm border border-transparent hover:border-brand-blue/10"
+          >
+            Request Demo
+          </button>
           <button 
             onClick={onLoginClick}
             className="px-6 py-2.5 bg-brand-blue text-white font-bold rounded-full shadow-lg shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all transform hover:-translate-y-0.5 flex items-center gap-2 text-sm"
@@ -114,9 +120,16 @@ const Navbar = ({ onLoginClick }: { onLoginClick: () => void }) => {
                 {link}
               </a>
             ))}
+            <hr className="border-gray-100 my-2"/>
+            <button 
+              onClick={() => { onRequestDemo(); setMobileMenuOpen(false); }}
+              className="w-full py-3 border border-brand-blue text-brand-blue font-bold rounded-xl"
+            >
+              Request Demo
+            </button>
             <button 
               onClick={() => { onLoginClick(); setMobileMenuOpen(false); }}
-              className="w-full py-3 bg-brand-blue text-white font-bold rounded-xl mt-2"
+              className="w-full py-3 bg-brand-blue text-white font-bold rounded-xl"
             >
               Portal Login
             </button>
@@ -245,8 +258,8 @@ const LeadCaptureModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
         ) : (
           <>
             <div className="mb-6">
-              <h2 className="font-display font-bold text-2xl text-brand-blue mb-1">Get Started</h2>
-              <p className="text-gray-600 text-sm">Transform your school management today.</p>
+              <h2 className="font-display font-bold text-2xl text-brand-blue mb-1">Request a Demo</h2>
+              <p className="text-gray-600 text-sm">See how Mwangaza can transform your school.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -289,7 +302,7 @@ const LeadCaptureModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 type="submit" 
                 className="w-full h-12 bg-[#1E3A8A] text-white rounded-xl font-bold shadow-lg hover:bg-brand-blue/90 transition-all mt-4"
               >
-                Get Started
+                Schedule Demo
               </button>
             </form>
           </>
@@ -312,7 +325,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
 
   return (
     <div className="min-h-screen bg-white font-sans text-gray-800 scroll-smooth">
-      <Navbar onLoginClick={() => setShowLoginModal(true)} />
+      <Navbar onLoginClick={() => setShowLoginModal(true)} onRequestDemo={() => setShowLeadModal(true)} />
 
       {/* HERO SECTION */}
       <section className="relative pt-32 pb-20 lg:pt-40 lg:pb-32 overflow-hidden bg-gradient-to-b from-brand-grey to-white" id="hero-portal">
