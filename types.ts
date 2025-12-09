@@ -24,6 +24,39 @@ export interface UserProfile {
   leaveBalances?: LeaveBalance; // New for staff
 }
 
+// --- HR & STAFF TYPES ---
+export type StaffRole = 'TEACHER' | 'ADMIN' | 'SUPPORT' | 'PRINCIPAL' | 'TRANSPORT';
+export type EmploymentStatus = 'ACTIVE' | 'INACTIVE' | 'ON_LEAVE';
+
+export interface StaffRecord {
+  id: string;
+  userId?: string; // Link to auth user if they have login access
+  fullName: string;
+  email: string;
+  phone: string;
+  role: StaffRole;
+  department: string;
+  status: EmploymentStatus;
+  startDate: string;
+  salaryBand?: string;
+  qualifications: string[]; // List of certs/degrees
+}
+
+export interface SystemConfig {
+  currency: string;
+  academicYear: string;
+  currentTerm: string;
+  lastModifiedBy: string;
+  lastModifiedDate: string;
+}
+
+export interface SystemHealth {
+  unlinkedStudents: number;
+  financeApiStatus: 'ACTIVE' | 'INACTIVE' | 'ERROR';
+  missingTimetableEntries: number;
+  lastBackup: string;
+}
+
 export interface Student {
   id: string;
   name: string;
@@ -34,6 +67,7 @@ export interface Student {
   contactEmail?: string;
   balance: number;
   avatarUrl: string;
+  transportRouteId?: string; // Linked transport route
 }
 
 export interface StudentNote {
@@ -205,4 +239,53 @@ export interface AdmissionApplication {
   
   // Internal
   notes?: string;
+}
+
+// --- SMS TEMPLATES ---
+export type SmsCategory = 'General' | 'Fees' | 'Exams' | 'Emergency' | 'Transport';
+export type SmsTemplateStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+
+export interface SmsTemplate {
+  id: string;
+  name: string;
+  category: SmsCategory;
+  content: string;
+  status: SmsTemplateStatus;
+  createdBy: string; // User ID or Name
+  rejectionReason?: string;
+}
+
+// --- TRANSPORT TYPES ---
+export type TransportStatus = 'ON_ROUTE' | 'IDLE' | 'DELAYED' | 'COMPLETED' | 'MAINTENANCE';
+
+export interface TransportRoute {
+  id: string;
+  name: string; // e.g. "Kileleshwa Morning"
+  driverName: string;
+  vehicleNumber: string; // e.g. "KBA 123T"
+  stops: string[]; // List of stop names
+  scheduleTime: string; // "06:30"
+}
+
+export interface TransportVehicle {
+  id: string;
+  routeId: string;
+  // Simulating coordinates as % of map container for demo purposes (x, y)
+  currentLocation: { x: number; y: number }; 
+  speed: number;
+  status: TransportStatus;
+  nextStop: string;
+  etaToNextStop: string; // "5 mins"
+  lastUpdated: string;
+}
+
+export interface TransportLog {
+  id: string;
+  date: string;
+  routeId: string;
+  driverName: string;
+  departureTime: string;
+  arrivalTime: string;
+  status: 'ON_TIME' | 'LATE';
+  delayMinutes?: number;
 }

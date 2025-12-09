@@ -77,7 +77,7 @@ const AdmissionsWizard: React.FC<AdmissionsWizardProps> = ({ onExit }) => {
     }, 1000);
   };
 
-  const inputClass = "w-full h-12 px-4 rounded-[12px] border border-gray-200 focus:border-brand-sky focus:ring-2 focus:ring-brand-sky/20 outline-none transition-all font-sans text-gray-700 bg-white";
+  const inputClass = "w-full h-12 px-4 rounded-[12px] border border-gray-200 focus:border-brand-sky focus:ring-2 focus:ring-brand-sky/20 outline-none transition-all font-sans text-gray-700 bg-gray-50 focus:bg-white";
   const labelClass = "block text-xs font-bold text-gray-500 uppercase mb-2";
 
   if (success) {
@@ -208,7 +208,7 @@ const AdmissionsWizard: React.FC<AdmissionsWizardProps> = ({ onExit }) => {
                             </label>
                             {formData.hasAllergies && (
                                 <textarea 
-                                    className="w-full mt-4 p-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-sky" 
+                                    className="w-full mt-4 p-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-sky bg-gray-50 focus:bg-white" 
                                     placeholder="Please list allergies..."
                                     value={formData.allergyDetails}
                                     onChange={e => handleChange('allergyDetails', e.target.value)}
@@ -223,7 +223,7 @@ const AdmissionsWizard: React.FC<AdmissionsWizardProps> = ({ onExit }) => {
                             </label>
                             {formData.hasSpecialNeeds && (
                                 <textarea 
-                                    className="w-full mt-4 p-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-sky" 
+                                    className="w-full mt-4 p-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-sky bg-gray-50 focus:bg-white" 
                                     placeholder="Please describe any learning support needs..."
                                     value={formData.specialNeedsDetails}
                                     onChange={e => handleChange('specialNeedsDetails', e.target.value)}

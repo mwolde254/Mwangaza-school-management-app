@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useStudentData } from '../context/StudentDataContext';
 import { useAuth } from '../context/AuthContext';
-import { Wallet, Star, AlertCircle, Loader2, Calendar, BookOpen, Bell, ArrowRight, CheckCircle2, X, Check, Users, MapPin, FileText, Table, HelpCircle, Phone, Mail, ChevronDown, ChevronUp, MessageSquare, Send } from 'lucide-react';
+import { Wallet, Star, AlertCircle, Loader2, Calendar, BookOpen, Bell, ArrowRight, CheckCircle2, X, Check, Users, MapPin, FileText, Table, HelpCircle, Phone, Mail, ChevronDown, ChevronUp, MessageSquare, Send, Bus, Clock } from 'lucide-react';
 import { db } from '../services/db';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
@@ -11,7 +11,7 @@ import TimetableModule from '../components/TimetableModule';
 import { TicketCategory } from '../types';
 
 const ParentPortal: React.FC = () => {
-  const { students, transactions, attendance, competencies, events, consents, submitConsent, supportTickets, addSupportTicket } = useStudentData();
+  const { students, transactions, attendance, competencies, events, consents, submitConsent, supportTickets, addSupportTicket, transportRoutes, transportVehicles } = useStudentData();
   const { user } = useAuth();
   
   const [mode, setMode] = useState<'DASHBOARD' | 'SUPPORT'>('DASHBOARD');
@@ -170,6 +170,10 @@ const ParentPortal: React.FC = () => {
   const childCompetencies = competencies.filter(c => c.studentId === activeChildId);
   const childAttendance = attendance.filter(a => a.studentId === activeChildId);
   
+  // Transport Logic
+  const activeRoute = transportRoutes.find(r => r.id === activeChild.transportRouteId);
+  const activeVehicle = activeRoute ? transportVehicles.find(v => v.routeId === activeRoute.id) : null;
+
   // My Tickets
   const myTickets = supportTickets.filter(t => t.parentId === user?.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -309,60 +313,56 @@ const ParentPortal: React.FC = () => {
             </div>
             </div>
 
-            {/* 2. UPCOMING EVENTS & TRIPS (Col Span 4) - Replaces Attendance Widget for focus on Action */}
-            <div className="md:col-span-4 bg-white rounded-[12px] shadow-sm border border-gray-100 p-6 flex flex-col relative hover:shadow-md transition-all">
-            <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-2 text-brand-blue/80">
-                    <Calendar size={18} />
-                    <span className="text-xs font-bold uppercase tracking-wider">Upcoming Events</span>
-                </div>
-            </div>
-            
-            <div className="space-y-3 flex-1 overflow-y-auto max-h-[250px] pr-1 custom-scrollbar">
-                {upcomingEvents.length > 0 ? upcomingEvents.map(evt => {
-                    const isSigned = checkConsentStatus(evt.id);
-                    // Check if trip is paid (Mock logic: look for recent TRIP transaction of exact amount)
-                    const isPaid = childTransactions.some(t => t.type === 'TRIP' && t.amount === evt.cost); 
-
-                    return (
-                    <div key={evt.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                        <div className="flex gap-3 mb-2">
-                            <div className={`flex flex-col items-center justify-center w-10 h-10 rounded-lg text-[10px] font-bold shrink-0 ${evt.type === 'TRIP' ? 'bg-brand-green/10 text-brand-green' : 'bg-brand-blue/10 text-brand-blue'}`}>
-                                <span className="uppercase">{format(new Date(evt.startDate), 'MMM')}</span>
-                                <span>{format(new Date(evt.startDate), 'dd')}</span>
-                            </div>
-                            <div>
-                                <p className="text-xs font-bold text-gray-800 line-clamp-1">{evt.title}</p>
-                                <p className="text-[10px] text-gray-500 line-clamp-1">{evt.description || 'No description'}</p>
-                            </div>
-                        </div>
-                        
-                        {/* ACTIONS */}
-                        <div className="flex gap-2 justify-end">
-                            {evt.requiresConsent && (
-                                isSigned ? (
-                                <span className="text-[10px] font-bold text-brand-green flex items-center gap-1 bg-white px-2 py-1 rounded border border-gray-200"><Check size={10}/> Consent Signed</span>
-                                ) : (
-                                <button onClick={() => handleSignConsent(evt.id)} className="text-[10px] font-bold text-brand-sky border border-brand-sky px-2 py-1 rounded hover:bg-brand-sky/10 transition-colors">Sign Consent</button>
-                                )
-                            )}
-                            {evt.requiresPayment && (
-                                isPaid ? (
-                                <span className="text-[10px] font-bold text-brand-green flex items-center gap-1 bg-white px-2 py-1 rounded border border-gray-200"><Check size={10}/> Paid</span>
-                                ) : (
-                                <button onClick={() => handlePayTrip(evt)} className="text-[10px] font-bold bg-brand-blue text-white px-2 py-1 rounded hover:bg-brand-blue/90 transition-colors flex items-center gap-1">Pay KES {evt.cost}</button>
-                                )
-                            )}
-                        </div>
+            {/* 2. TRANSPORT INTELLIGENCE WIDGET (Col Span 4) */}
+            <div className="md:col-span-4 bg-white rounded-[12px] shadow-sm border border-gray-100 p-6 flex flex-col hover:shadow-md transition-all overflow-hidden relative">
+                <div className="flex justify-between items-center mb-4 relative z-10">
+                    <div className="flex items-center gap-2 text-brand-blue/80">
+                        <Bus size={18} />
+                        <span className="text-xs font-bold uppercase tracking-wider">My Child's Transport</span>
                     </div>
-                    )
-                }) : (
-                    <p className="text-xs text-gray-400 italic text-center py-8">No upcoming events scheduled.</p>
+                </div>
+
+                {activeRoute ? (
+                    <div className="relative z-10 flex-1 flex flex-col">
+                        <div className="mb-4">
+                            <h4 className="text-lg font-bold text-gray-800">{activeRoute.name}</h4>
+                            <p className="text-xs text-gray-500">Scheduled: {activeRoute.scheduleTime}</p>
+                        </div>
+
+                        {activeVehicle && activeVehicle.status !== 'IDLE' ? (
+                            <div className="bg-brand-blue/5 p-4 rounded-xl border border-brand-blue/10 mb-4 flex-1 flex flex-col justify-center">
+                                <div className="flex items-center justify-between mb-3">
+                                    <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${activeVehicle.status === 'DELAYED' ? 'bg-brand-red text-white' : 'bg-brand-green text-white'}`}>
+                                        {activeVehicle.status === 'ON_ROUTE' ? 'Arriving Soon' : 'Delayed'}
+                                    </span>
+                                    <span className="text-2xl font-bold text-brand-blue">{activeVehicle.etaToNextStop}</span>
+                                </div>
+                                <div className="text-xs text-gray-600 space-y-1">
+                                    <p className="flex items-center gap-2"><MapPin size={12}/> Next Stop: {activeVehicle.nextStop}</p>
+                                    <p className="flex items-center gap-2"><Users size={12}/> Driver: {activeRoute.driverName}</p>
+                                </div>
+                                {/* Simple Visual Progress */}
+                                <div className="mt-4 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                    <div className="h-full bg-brand-blue w-2/3 animate-pulse"></div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex-1 flex flex-col items-center justify-center text-center py-6 bg-gray-50 rounded-xl border border-gray-100 border-dashed">
+                                <Clock size={32} className="text-gray-300 mb-2"/>
+                                <p className="text-sm font-bold text-gray-500">Bus is currently idle.</p>
+                                <p className="text-xs text-gray-400">Next trip starts tomorrow morning.</p>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center py-8 text-gray-400">
+                        <Bus size={32} className="mb-2 opacity-20"/>
+                        <p className="text-xs italic">No transport assigned.</p>
+                    </div>
                 )}
             </div>
-            </div>
 
-            {/* 3. TIMETABLE WIDGET (Col Span 12 - New) */}
+            {/* 3. TIMETABLE WIDGET (Col Span 12) */}
             <div className="md:col-span-12">
                 <div className="bg-white rounded-[12px] shadow-sm border border-gray-100 overflow-hidden">
                     <div className="p-6 border-b border-gray-100 flex items-center gap-2">
@@ -454,6 +454,10 @@ const ParentPortal: React.FC = () => {
         </div>
       )}
 
+      {/* ... (Support Mode & Modals same as before) ... */}
+      
+      {/* Re-rendering existing Modals for full functionality preservation */}
+      {/* ... (Copy of Support Mode & Payment Modal code) ... */}
       {/* === SUPPORT MODE === */}
       {mode === 'SUPPORT' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-up">

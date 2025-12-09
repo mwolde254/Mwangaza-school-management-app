@@ -1,5 +1,5 @@
 
-import { Student, FinanceTransaction, AttendanceRecord, LeaveRequest, Competency, UserProfile, UserRole, Assessment, AttendanceStatus, StudentNote, SchoolEvent, EventConsent, TimetableSlot, SupportTicket, AdmissionApplication } from '../types';
+import { Student, FinanceTransaction, AttendanceRecord, LeaveRequest, Competency, UserProfile, UserRole, Assessment, AttendanceStatus, StudentNote, SchoolEvent, EventConsent, TimetableSlot, SupportTicket, AdmissionApplication, SmsTemplate, TransportRoute, TransportVehicle, TransportLog, StaffRecord, SystemConfig, SystemHealth } from '../types';
 
 // Simulating Firestore behavior with LocalStorage and Async delays
 const DELAY = 500;
@@ -10,7 +10,7 @@ const MOCK_USERS: UserProfile[] = [
     id: 'u1', 
     name: 'Principal Admin', 
     email: 'admin@school.com', 
-    role: UserRole.ADMIN, 
+    role: UserRole.PRINCIPAL, 
     status: 'ACTIVE', 
     avatarUrl: 'https://ui-avatars.com/api/?name=Principal+Admin&background=1E3A8A&color=fff',
     leaveBalances: {
@@ -53,12 +53,43 @@ const MOCK_USERS: UserProfile[] = [
       sick: { total: 14, used: 10 },
       compassionate: { total: 7, used: 3 }
     }
+  },
+  { 
+    id: 'u5', 
+    name: 'System Administrator', 
+    email: 'sysadmin@school.com', 
+    role: UserRole.ADMIN, 
+    status: 'ACTIVE', 
+    avatarUrl: 'https://ui-avatars.com/api/?name=System+Admin&background=000&color=fff',
   }
 ];
 
+// --- HR MOCK DATA ---
+const MOCK_STAFF: StaffRecord[] = [
+  { id: 'stf1', userId: 'u2', fullName: 'Sarah Johnson', email: 'teacher@school.com', phone: '0711223344', role: 'TEACHER', department: 'Primary', status: 'ACTIVE', startDate: '2020-01-10', salaryBand: 'TS-3', qualifications: ['B.Ed Primary Education', 'CBC Certified'] },
+  { id: 'stf2', userId: 'u4', fullName: 'John Maina', email: 'john@school.com', phone: '0722334455', role: 'TEACHER', department: 'Science', status: 'ACTIVE', startDate: '2019-05-01', salaryBand: 'TS-4', qualifications: ['B.Sc Science', 'PGDE'] },
+  { id: 'stf3', fullName: 'Mary Wanjiku', email: 'mary@school.com', phone: '0733445566', role: 'SUPPORT', department: 'Catering', status: 'ACTIVE', startDate: '2021-02-15', salaryBand: 'SS-2', qualifications: ['Food & Beverage Cert'] },
+  { id: 'stf4', fullName: 'James Mwangi', email: 'james@school.com', phone: '0744556677', role: 'TRANSPORT', department: 'Logistics', status: 'ON_LEAVE', startDate: '2018-09-01', salaryBand: 'SS-3', qualifications: ['PSV License', 'First Aid'] },
+];
+
+const MOCK_SYSTEM_CONFIG: SystemConfig = {
+  currency: 'KES',
+  academicYear: '2023',
+  currentTerm: 'Term 3',
+  lastModifiedBy: 'System Administrator',
+  lastModifiedDate: '2023-09-01T10:00:00Z'
+};
+
+const MOCK_DATA_HEALTH: SystemHealth = {
+  unlinkedStudents: 2,
+  financeApiStatus: 'ACTIVE',
+  missingTimetableEntries: 5,
+  lastBackup: '2023-10-26T02:00:00Z'
+};
+
 const MOCK_STUDENTS: Student[] = [
-  { id: 'st1', name: 'Zuri Kamau', grade: 'Grade 4', admissionNumber: 'ADM-2023-001', parentName: 'David Kamau', contactPhone: '0712345678', contactEmail: 'david@kamau.com', balance: 15000, avatarUrl: 'https://picsum.photos/100/100?random=1' },
-  { id: 'st2', name: 'Jabari Ochieng', grade: 'Grade 4', admissionNumber: 'ADM-2023-002', parentName: 'Grace Ochieng', contactPhone: '0722345678', contactEmail: 'grace@ochieng.com', balance: 0, avatarUrl: 'https://picsum.photos/100/100?random=2' },
+  { id: 'st1', name: 'Zuri Kamau', grade: 'Grade 4', admissionNumber: 'ADM-2023-001', parentName: 'David Kamau', contactPhone: '0712345678', contactEmail: 'david@kamau.com', balance: 15000, avatarUrl: 'https://picsum.photos/100/100?random=1', transportRouteId: 'tr1' },
+  { id: 'st2', name: 'Jabari Ochieng', grade: 'Grade 4', admissionNumber: 'ADM-2023-002', parentName: 'Grace Ochieng', contactPhone: '0722345678', contactEmail: 'grace@ochieng.com', balance: 0, avatarUrl: 'https://picsum.photos/100/100?random=2', transportRouteId: 'tr2' },
   { id: 'st3', name: 'Nia Wanjiku', grade: 'Grade 5', admissionNumber: 'ADM-2023-003', parentName: 'Esther Wanjiku', contactPhone: '0733345678', contactEmail: 'esther@wanjiku.com', balance: 4500, avatarUrl: 'https://picsum.photos/100/100?random=3' },
   { id: 'st4', name: 'Kofi Abdi', grade: 'Grade 4', admissionNumber: 'ADM-2023-004', parentName: 'Mohammed Abdi', contactPhone: '0744345678', contactEmail: 'mohammed@abdi.com', balance: 22000, avatarUrl: 'https://picsum.photos/100/100?random=4' },
 ];
@@ -175,6 +206,13 @@ const MOCK_APPLICATIONS: AdmissionApplication[] = [
   }
 ];
 
+const MOCK_TEMPLATES: SmsTemplate[] = [
+  { id: 'tpl1', name: 'Fee Reminder - T3', category: 'Fees', content: 'Dear {{Parent Name}}, this is a gentle reminder that {{Student Name}} has a fee balance of KES {{Fee Balance}}. Please pay by Friday.', status: 'APPROVED', createdBy: 'u1' },
+  { id: 'tpl2', name: 'Exam Results Ready', category: 'Exams', content: 'Hello, exam results for {{Student Name}} are now available on the portal. Admission No: {{Admission No}}. Regards, Mwangaza.', status: 'APPROVED', createdBy: 'u1' },
+  { id: 'tpl3', name: 'Trip Departure', category: 'Transport', content: 'Reminder: The bus for {{Class}} departs tomorrow at 7:00 AM sharp. Please ensure {{Student Name}} is punctual.', status: 'DRAFT', createdBy: 'u2' },
+  { id: 'tpl4', name: 'Emergency Closure', category: 'Emergency', content: 'Urgent: School will be closed tomorrow due to heavy rains. Please keep {{Student Name}} at home.', status: 'PENDING_APPROVAL', createdBy: 'u2' },
+];
+
 export interface AppNotification {
   id: string;
   userId: string; // 'all' or specific user id
@@ -188,6 +226,23 @@ export interface AppNotification {
 const MOCK_NOTIFICATIONS: AppNotification[] = [
   { id: 'n1', userId: 'all', title: 'System Update', message: 'Maintenance scheduled for 2:00 AM tonight.', type: 'INFO', read: false, date: '2023-10-25' },
   { id: 'n2', userId: 'u1', title: 'New Leave Request', message: 'Mr. John Maina has requested sick leave.', type: 'WARNING', read: false, date: '2023-10-24' },
+];
+
+// --- TRANSPORT MOCK ---
+const MOCK_TRANSPORT_ROUTES: TransportRoute[] = [
+  { id: 'tr1', name: 'Kileleshwa Morning', driverName: 'James Mwangi', vehicleNumber: 'KBA 321T', stops: ['Kileleshwa P/S', 'Oloitoktok Rd', 'Methodist Guest House', 'Valley Arcade', 'School'], scheduleTime: '06:45' },
+  { id: 'tr2', name: 'Westlands Express', driverName: 'Peter Kamau', vehicleNumber: 'KCD 555X', stops: ['Sarit Centre', 'Westgate', 'Mpaka Rd', 'School'], scheduleTime: '07:00' },
+];
+
+const MOCK_TRANSPORT_VEHICLES: TransportVehicle[] = [
+  { id: 'v1', routeId: 'tr1', currentLocation: { x: 45, y: 30 }, speed: 45, status: 'ON_ROUTE', nextStop: 'Valley Arcade', etaToNextStop: '5 mins', lastUpdated: new Date().toISOString() },
+  { id: 'v2', routeId: 'tr2', currentLocation: { x: 70, y: 60 }, speed: 20, status: 'DELAYED', nextStop: 'Mpaka Rd', etaToNextStop: '15 mins', lastUpdated: new Date().toISOString() },
+];
+
+const MOCK_TRANSPORT_LOGS: TransportLog[] = [
+  { id: 'lg1', date: '2023-10-26', routeId: 'tr1', driverName: 'James Mwangi', departureTime: '06:45', arrivalTime: '07:30', status: 'ON_TIME' },
+  { id: 'lg2', date: '2023-10-26', routeId: 'tr2', driverName: 'Peter Kamau', departureTime: '07:05', arrivalTime: '08:15', status: 'LATE', delayMinutes: 15 },
+  { id: 'lg3', date: '2023-10-25', routeId: 'tr1', driverName: 'James Mwangi', departureTime: '06:40', arrivalTime: '07:25', status: 'ON_TIME' },
 ];
 
 // Helper to simulate DB
@@ -221,7 +276,18 @@ export const db = {
       if (path === 'timetable') return getCollection<TimetableSlot>('timetable', MOCK_TIMETABLE);
       if (path === 'support_tickets') return getCollection<SupportTicket>('support_tickets', MOCK_TICKETS);
       if (path === 'admissions_applications') return getCollection<AdmissionApplication>('admissions_applications', MOCK_APPLICATIONS);
+      if (path === 'communication_templates') return getCollection<SmsTemplate>('communication_templates', MOCK_TEMPLATES);
+      if (path === 'transport_routes') return getCollection<TransportRoute>('transport_routes', MOCK_TRANSPORT_ROUTES);
+      if (path === 'transport_vehicles') return getCollection<TransportVehicle>('transport_vehicles', MOCK_TRANSPORT_VEHICLES);
+      if (path === 'transport_logs') return getCollection<TransportLog>('transport_logs', MOCK_TRANSPORT_LOGS);
+      // New Collections
+      if (path === 'staff') return getCollection<StaffRecord>('staff', MOCK_STAFF);
       return [];
+    },
+    // Special getter for single config docs
+    getConfig: async () => {
+        await new Promise(r => setTimeout(r, DELAY));
+        return { config: MOCK_SYSTEM_CONFIG, health: MOCK_DATA_HEALTH };
     },
     add: async (data: any) => {
       await new Promise(r => setTimeout(r, DELAY));
@@ -239,7 +305,12 @@ export const db = {
                           path === 'consents' ? MOCK_CONSENTS : 
                           path === 'timetable' ? MOCK_TIMETABLE : 
                           path === 'support_tickets' ? MOCK_TICKETS : 
-                          path === 'admissions_applications' ? MOCK_APPLICATIONS : [];
+                          path === 'admissions_applications' ? MOCK_APPLICATIONS : 
+                          path === 'communication_templates' ? MOCK_TEMPLATES : 
+                          path === 'transport_routes' ? MOCK_TRANSPORT_ROUTES :
+                          path === 'transport_vehicles' ? MOCK_TRANSPORT_VEHICLES :
+                          path === 'transport_logs' ? MOCK_TRANSPORT_LOGS : 
+                          path === 'staff' ? MOCK_STAFF : [];
 
       const list = getCollection(collectionKey, defaultData as any[]);
       
@@ -286,6 +357,11 @@ export const db = {
     else if (path === 'timetable') defaultData = MOCK_TIMETABLE;
     else if (path === 'support_tickets') defaultData = MOCK_TICKETS;
     else if (path === 'admissions_applications') defaultData = MOCK_APPLICATIONS;
+    else if (path === 'communication_templates') defaultData = MOCK_TEMPLATES;
+    else if (path === 'transport_routes') defaultData = MOCK_TRANSPORT_ROUTES;
+    else if (path === 'transport_vehicles') defaultData = MOCK_TRANSPORT_VEHICLES;
+    else if (path === 'transport_logs') defaultData = MOCK_TRANSPORT_LOGS;
+    else if (path === 'staff') defaultData = MOCK_STAFF;
     
     const data = getCollection(path, defaultData);
     callback(data);

@@ -1,16 +1,17 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useStudentData } from '../context/StudentDataContext';
-import { UserRole } from '../types';
+import { UserRole, SmsCategory, SmsTemplate, SmsTemplateStatus } from '../types';
 import { 
   User, Lock, Bell, Globe, Moon, Shield, CreditCard, 
   BookOpen, MessageSquare, Users, Calendar, Save, Check,
-  Smartphone, Mail, AlertTriangle, Loader2, Link as LinkIcon, Unlink, Plus, AlertCircle
+  Smartphone, Mail, AlertTriangle, Loader2, Link as LinkIcon, Unlink, Plus, AlertCircle, LayoutTemplate, Trash2, Eye, EyeOff, X, FileText, Send, Edit2
 } from 'lucide-react';
 import { db } from '../services/db';
 import UserManagement from '../components/UserManagement';
 
-type SettingsTab = 'PROFILE' | 'NOTIFICATIONS' | 'REGION' | 'APPEARANCE' | 'ADMIN_SYSTEM' | 'ADMIN_ACCESS' | 'ADMIN_FINANCE' | 'TEACHER_CLASS' | 'TEACHER_MSG' | 'PARENT_CHILD' | 'PARENT_FEES';
+type SettingsTab = 'PROFILE' | 'NOTIFICATIONS' | 'REGION' | 'APPEARANCE' | 'ADMIN_SYSTEM' | 'ADMIN_ACCESS' | 'ADMIN_FINANCE' | 'TEMPLATES' | 'TEACHER_CLASS' | 'TEACHER_MSG' | 'PARENT_CHILD' | 'PARENT_FEES';
 
 interface NotificationEvent {
   id: string;
@@ -32,7 +33,7 @@ interface NotificationState {
 
 const SettingsView: React.FC = () => {
   const { user, updateProfile } = useAuth();
-  const { students } = useStudentData(); // Added to resolve student names
+  const { students, smsTemplates, addSmsTemplate, updateSmsTemplate, deleteSmsTemplate } = useStudentData(); 
   const [activeTab, setActiveTab] = useState<SettingsTab>('PROFILE');
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -40,7 +41,7 @@ const SettingsView: React.FC = () => {
   
   // Profile Form State
   const [name, setName] = useState(user?.name || '');
-  const [email, setEmail] = useState(user?.email || ''); // Assuming email display only or managed elsewhere
+  const [email, setEmail] = useState(user?.email || ''); 
   const [phone, setPhone] = useState(user?.phoneNumber || '');
 
   // Mock Settings State
@@ -55,6 +56,16 @@ const SettingsView: React.FC = () => {
   // Parent Child Logic
   const [linkToken, setLinkToken] = useState('');
   const [linkStatus, setLinkStatus] = useState<'IDLE' | 'SUCCESS' | 'ERROR'>('IDLE');
+
+  // --- TEMPLATE EDITOR STATE ---
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [tplName, setTplName] = useState('');
+  const [tplCategory, setTplCategory] = useState<SmsCategory>('General');
+  const [tplContent, setTplContent] = useState('');
+  const [tplPreviewMode, setTplPreviewMode] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [showRejectInput, setShowRejectInput] = useState(false);
 
   // Comprehensive Notification State
   const [notifConfig, setNotifConfig] = useState<NotificationState>({
@@ -155,6 +166,100 @@ const SettingsView: React.FC = () => {
       setIsSaving(false);
       showSaveSuccess();
   }
+
+  // --- Template Handlers ---
+  const resetTemplateForm = () => {
+    setTplName(''); 
+    setTplCategory('General'); 
+    setTplContent(''); 
+    setEditingTemplateId(null);
+    setTplPreviewMode(false);
+    setShowRejectInput(false);
+    setRejectReason('');
+  };
+
+  const handleOpenTemplateModal = (template?: SmsTemplate) => {
+    if (template) {
+        setEditingTemplateId(template.id);
+        setTplName(template.name);
+        setTplCategory(template.category);
+        setTplContent(template.content);
+    } else {
+        resetTemplateForm();
+    }
+    setShowTemplateModal(true);
+  };
+
+  const handleInsertVariable = (variable: string) => {
+    setTplContent(prev => prev + ` {{${variable}}} `);
+  };
+
+  const handleSaveTemplate = async (status: SmsTemplateStatus) => {
+    if(!tplName || !tplContent) return;
+    setIsSaving(true);
+
+    if (editingTemplateId) {
+        await updateSmsTemplate(editingTemplateId, {
+            name: tplName,
+            category: tplCategory,
+            content: tplContent,
+            status: status
+        });
+    } else {
+        await addSmsTemplate({
+            name: tplName,
+            category: tplCategory,
+            content: tplContent,
+            status: status,
+            createdBy: user?.id || 'unknown'
+        });
+    }
+
+    setIsSaving(false);
+    setShowTemplateModal(false);
+    resetTemplateForm();
+    showSaveSuccess();
+  };
+
+  const handlePrincipalAction = async (action: 'APPROVE' | 'REJECT') => {
+      if (!editingTemplateId) return;
+      
+      setIsSaving(true);
+      if (action === 'APPROVE') {
+          await updateSmsTemplate(editingTemplateId, { status: 'APPROVED' });
+      } else {
+          await updateSmsTemplate(editingTemplateId, { status: 'REJECTED', rejectionReason: rejectReason });
+      }
+      setIsSaving(false);
+      setShowTemplateModal(false);
+      resetTemplateForm();
+      showSaveSuccess();
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    if(confirm('Delete this template?')) {
+        await deleteSmsTemplate(id);
+        showSaveSuccess();
+    }
+  };
+
+  const getPreviewText = (text: string) => {
+    return text
+        .replace(/{{Student Name}}/g, "John Doe")
+        .replace(/{{Parent Name}}/g, "Mr. Doe")
+        .replace(/{{Class}}/g, "Grade 4")
+        .replace(/{{Fee Balance}}/g, "15,000")
+        .replace(/{{Admission No}}/g, "ADM-2023-001");
+  };
+
+  const getStatusColor = (status: SmsTemplateStatus) => {
+      switch(status) {
+          case 'APPROVED': return 'bg-brand-green/10 text-brand-green border-brand-green/20';
+          case 'PENDING_APPROVAL': return 'bg-brand-yellow/10 text-brand-yellow border-brand-yellow/20';
+          case 'REJECTED': return 'bg-brand-red/10 text-brand-red border-brand-red/20';
+          default: return 'bg-gray-100 text-gray-500 border-gray-200';
+      }
+  };
 
   // --- Components ---
 
@@ -265,7 +370,7 @@ const SettingsView: React.FC = () => {
   const inputClass = "w-full h-12 px-4 rounded-[6px] border border-gray-200 focus:border-brand-sky focus:ring-2 focus:ring-brand-sky/20 outline-none transition-all font-sans text-gray-700 bg-white";
 
   return (
-    <div className="flex flex-col md:flex-row h-full min-h-[600px] bg-white rounded-[12px] shadow-sm border border-gray-100 overflow-hidden animate-fade-in">
+    <div className="flex flex-col md:flex-row h-full min-h-[600px] bg-white rounded-[12px] shadow-sm border border-gray-100 overflow-hidden animate-fade-in relative">
       
       {/* Sidebar Navigation */}
       <div className="w-full md:w-64 bg-brand-grey p-4 space-y-2 border-r border-gray-100 overflow-y-auto">
@@ -278,14 +383,19 @@ const SettingsView: React.FC = () => {
         <NavItem id="APPEARANCE" label="App Appearance" icon={Moon} />
 
         {/* Role Specific Modules */}
-        {user?.role === UserRole.ADMIN && (
+        {(user?.role === UserRole.ADMIN || user?.role === UserRole.TEACHER || user?.role === UserRole.PRINCIPAL) && (
           <>
             <div className="px-4 py-2 mb-2 mt-6">
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Administration</h4>
             </div>
-            <NavItem id="ADMIN_SYSTEM" label="System Config" icon={CreditCard} />
-            <NavItem id="ADMIN_ACCESS" label="Access Control" icon={Shield} />
-            <NavItem id="ADMIN_FINANCE" label="Payment Gateways" icon={CreditCard} />
+            {user?.role === UserRole.ADMIN && (
+                <>
+                    <NavItem id="ADMIN_SYSTEM" label="System Config" icon={CreditCard} />
+                    <NavItem id="ADMIN_ACCESS" label="Access Control" icon={Shield} />
+                    <NavItem id="ADMIN_FINANCE" label="Payment Gateways" icon={CreditCard} />
+                </>
+            )}
+            <NavItem id="TEMPLATES" label="Communication Templates" icon={LayoutTemplate} />
           </>
         )}
 
@@ -295,7 +405,6 @@ const SettingsView: React.FC = () => {
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Classroom</h4>
             </div>
             <NavItem id="TEACHER_CLASS" label="Teaching Defaults" icon={BookOpen} />
-            <NavItem id="TEACHER_MSG" label="Message Templates" icon={MessageSquare} />
           </>
         )}
 
@@ -363,261 +472,236 @@ const SettingsView: React.FC = () => {
           </div>
         )}
 
-        {/* NOTIFICATIONS */}
-        {activeTab === 'NOTIFICATIONS' && (
-          <div className="max-w-4xl animate-slide-up">
-            <SectionTitle icon={Bell} title="Notifications Configuration" />
-            
-            {/* Global Preferences */}
-            <div className="bg-brand-grey/50 rounded-[12px] p-6 mb-8 border border-gray-200">
-               <h3 className="font-display font-bold text-gray-800 mb-4 flex items-center gap-2">
-                 <Globe size={18} className="text-brand-blue"/> Global Channel Preferences
-               </h3>
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
-                     <span className="text-sm font-bold text-gray-700 flex items-center gap-2"><Smartphone size={16}/> In-App Push</span>
-                     <button 
-                        onClick={() => toggleGlobal('app')}
-                        className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-200 ${notifConfig.global.app ? 'bg-brand-green' : 'bg-gray-300'}`}
-                      >
-                        <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-200 ${notifConfig.global.app ? 'translate-x-5' : 'translate-x-0'}`} />
-                      </button>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
-                     <span className="text-sm font-bold text-gray-700 flex items-center gap-2"><Mail size={16}/> Email Updates</span>
-                     <button 
-                        onClick={() => toggleGlobal('email')}
-                        className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-200 ${notifConfig.global.email ? 'bg-brand-green' : 'bg-gray-300'}`}
-                      >
-                        <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-200 ${notifConfig.global.email ? 'translate-x-5' : 'translate-x-0'}`} />
-                      </button>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
-                     <span className="text-sm font-bold text-gray-700 flex items-center gap-2"><MessageSquare size={16}/> SMS Alerts</span>
-                     <button 
-                        onClick={() => toggleGlobal('sms')}
-                        className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-200 ${notifConfig.global.sms ? 'bg-brand-green' : 'bg-gray-300'}`}
-                      >
-                        <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-200 ${notifConfig.global.sms ? 'translate-x-5' : 'translate-x-0'}`} />
-                      </button>
-                  </div>
-               </div>
-            </div>
-
-            {/* Granular Categories */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <div className="md:col-span-2">
-                 <NotificationCard 
-                   title="Financial Alerts" 
-                   category="financial"
-                   events={notifConfig.categories.financial} 
-                   color="bg-gradient-to-r from-brand-blue/5 to-brand-yellow/5 border-b-brand-blue/10"
-                 />
-               </div>
-               <div className="md:col-span-1">
-                 <NotificationCard 
-                   title="Academic Updates" 
-                   category="academic"
-                   events={notifConfig.categories.academic} 
-                   color="bg-brand-green/5 border-b-brand-green/10"
-                 />
-               </div>
-               <div className="md:col-span-1">
-                 <NotificationCard 
-                   title="System & Health" 
-                   category="system"
-                   events={notifConfig.categories.system} 
-                   color="bg-brand-sky/5 border-b-brand-sky/10"
-                 />
-               </div>
-               <div className="md:col-span-2">
-                 <NotificationCard 
-                   title="Communication" 
-                   category="communication"
-                   events={notifConfig.categories.communication} 
-                   color="bg-gray-50 border-b-gray-100"
-                 />
-               </div>
-            </div>
-            
-            {/* Warning Message */}
-            {!notifConfig.global.sms && (
-               <div className="flex items-start gap-3 p-4 bg-brand-yellow/10 rounded-[12px] text-brand-yellow-700 border border-brand-yellow/20 mb-4 animate-fade-in">
-                  <AlertTriangle size={20} className="flex-shrink-0 mt-0.5 text-brand-yellow"/>
-                  <div>
-                    <h4 className="font-bold text-sm text-brand-yellow">Critical Warning</h4>
-                    <p className="text-xs opacity-90">Disabling Global SMS Alerts may prevent you from receiving urgent emergency broadcasts and critical financial OTPs. Are you sure?</p>
-                  </div>
-               </div>
-            )}
-
-            {/* Save Actions */}
-            <div className="sticky bottom-0 bg-white pt-4 pb-2 border-t border-gray-100 flex items-center justify-between z-10">
-               {showSuccess ? (
-                  <div className="flex items-center gap-2 text-brand-green font-bold text-sm animate-fade-in">
-                    <Check size={18}/> Changes saved successfully!
-                  </div>
-               ) : (
-                  <div className="text-xs text-gray-400 font-medium italic">
-                    {isDirty ? 'You have unsaved changes.' : 'All systems synchronized.'}
-                  </div>
-               )}
-               
-               <button 
-                 onClick={handleSaveNotifications}
-                 disabled={!isDirty || isSaving}
-                 className="px-8 py-3 bg-brand-blue text-white rounded-[12px] font-bold shadow-lg shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-               >
-                 {isSaving ? 'Saving...' : 'Save Changes'}
-               </button>
-            </div>
-          </div>
-        )}
-
-        {/* REGION */}
-        {activeTab === 'REGION' && (
-           <div className="max-w-2xl animate-slide-up">
-             <SectionTitle icon={Globe} title="Language & Region" />
-             <div className="space-y-6">
-                <div>
-                   <label className="block text-xs font-bold text-gray-500 uppercase mb-2">System Language</label>
-                   <select value={language} onChange={(e) => setLanguage(e.target.value)} className={inputClass}>
-                      <option>English</option>
-                      <option>Swahili</option>
-                   </select>
-                </div>
-                <div>
-                   <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Currency</label>
-                   <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={inputClass}>
-                      <option>KES (Kenyan Shilling)</option>
-                      <option>USD (US Dollar)</option>
-                   </select>
-                </div>
-             </div>
-           </div>
-        )}
-
-        {/* APPEARANCE */}
-        {activeTab === 'APPEARANCE' && (
-           <div className="max-w-2xl animate-slide-up">
-             <SectionTitle icon={Moon} title="App Appearance" />
-             <div className="space-y-4">
-                <Toggle label="Dark Mode" checked={darkMode} onChange={() => setDarkMode(!darkMode)} />
-                <p className="text-sm text-gray-500">Switch between light and dark themes. Current theme: <span className="font-bold">{darkMode ? 'Dark' : 'Light'}</span></p>
-             </div>
-           </div>
-        )}
-
-        {/* --- ADMIN ACCESS (INVITE) --- */}
+        {/* ACCESS CONTROL */}
         {activeTab === 'ADMIN_ACCESS' && (
-           <UserManagement />
+            <UserManagement />
         )}
 
-        {/* --- ADMIN FINANCE --- */}
-        {activeTab === 'ADMIN_FINANCE' && (
-           <div className="max-w-2xl animate-slide-up">
-              <SectionTitle icon={CreditCard} title="Payment Gateways" />
-              <div className="p-4 bg-brand-yellow/10 border border-brand-yellow/20 rounded-[12px] mb-6 flex items-start gap-3">
-                 <AlertCircle className="text-brand-yellow shrink-0 mt-1" size={20}/>
-                 <div>
-                    <h4 className="font-bold text-brand-yellow text-sm">Sensitive Configuration</h4>
-                    <p className="text-xs text-brand-yellow/80">Updating these keys will immediately affect MPesa processing.</p>
-                 </div>
-              </div>
-              <div className="space-y-4">
-                 <div>
-                   <label className="block text-xs font-bold text-gray-500 uppercase mb-2">MPesa Consumer Key</label>
-                   <div className="flex gap-2">
-                     <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className={inputClass} />
-                     <button className="px-4 border border-gray-200 rounded-[6px] hover:bg-gray-50 font-bold text-xs text-gray-600">Show</button>
-                   </div>
-                 </div>
-                 <div>
-                   <label className="block text-xs font-bold text-gray-500 uppercase mb-2">MPesa Consumer Secret</label>
-                   <input type="password" value={apiSecret} onChange={(e) => setApiSecret(e.target.value)} className={inputClass} />
-                 </div>
-                 <div className="pt-4 flex justify-end">
+        {/* ... (Existing Notification, Region, Appearance tabs) ... */}
+
+        {/* COMMUNICATION TEMPLATES */}
+        {activeTab === 'TEMPLATES' && (
+            <div className="max-w-4xl animate-slide-up">
+                <div className="flex justify-between items-center mb-6">
+                    <SectionTitle icon={LayoutTemplate} title="SMS Templates" />
                     <button 
-                      onClick={handleUpdateCredentials}
-                      disabled={isSaving}
-                      className="px-6 py-3 bg-brand-blue text-white rounded-[12px] font-bold shadow-lg shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all"
+                        onClick={() => handleOpenTemplateModal()}
+                        className="px-4 py-2 bg-brand-blue text-white rounded-[12px] font-bold text-sm shadow-lg shadow-brand-blue/20 hover:bg-brand-blue/90 flex items-center gap-2"
                     >
-                      {isSaving ? 'Updating...' : 'Update Credentials'}
+                        <Plus size={16}/> Create New Template
                     </button>
-                 </div>
-                 {showSuccess && <p className="text-right text-brand-green font-bold text-sm">Credentials Updated.</p>}
-              </div>
-           </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {smsTemplates.map(tpl => {
+                        const canEdit = user?.role === UserRole.ADMIN || tpl.createdBy === user?.id; // Only Admin or Creator can delete/edit drafts
+                        const isPrincipal = user?.role === UserRole.PRINCIPAL;
+                        const canReview = isPrincipal && tpl.status === 'PENDING_APPROVAL';
+
+                        return (
+                            <div key={tpl.id} className="bg-white rounded-[12px] border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow flex flex-col h-full group relative">
+                                <div className="flex justify-between items-start mb-2">
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded font-display uppercase tracking-wider border ${getStatusColor(tpl.status)}`}>
+                                        {tpl.status.replace('_', ' ')}
+                                    </span>
+                                    {canEdit && (
+                                        <button 
+                                            onClick={() => handleDeleteTemplate(tpl.id)}
+                                            className="text-gray-300 hover:text-brand-red opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <Trash2 size={16}/>
+                                        </button>
+                                    )}
+                                </div>
+                                <h4 className="font-bold text-gray-800 text-lg mb-2 line-clamp-1">{tpl.name}</h4>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase mb-2 block">{tpl.category}</span>
+                                <p className="text-xs text-gray-500 mb-4 line-clamp-3 flex-1">{tpl.content}</p>
+                                
+                                <div className="pt-3 border-t border-gray-50 flex items-center justify-between gap-2">
+                                    {(canEdit || canReview) ? (
+                                        <button 
+                                            onClick={() => handleOpenTemplateModal(tpl)}
+                                            className="text-xs font-bold text-brand-blue flex items-center gap-1 hover:underline"
+                                        >
+                                            <Edit2 size={12}/> {canReview ? 'Review' : 'Edit'}
+                                        </button>
+                                    ) : (
+                                        <span className="text-xs text-gray-400">Read Only</span>
+                                    )}
+                                    <span className="text-[10px] text-gray-400">{tpl.content.length} chars</span>
+                                </div>
+                            </div>
+                        );
+                    })}
+                    {smsTemplates.length === 0 && (
+                        <div className="col-span-full py-12 text-center text-gray-400 italic bg-gray-50 rounded-[12px]">
+                            No templates created yet.
+                        </div>
+                    )}
+                </div>
+            </div>
         )}
 
-        {/* --- PARENT CHILD --- */}
-        {activeTab === 'PARENT_CHILD' && (
-           <div className="max-w-2xl animate-slide-up">
-              <SectionTitle icon={Users} title="Child Access" />
-              
-              <div className="space-y-4 mb-8">
-                 <h4 className="font-bold text-gray-800 text-sm">Linked Profiles</h4>
-                 {user?.linkedStudentIds?.map(id => {
-                    const student = students.find(s => s.id === id);
-                    return (
-                        <div key={id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-[12px] shadow-sm">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-brand-grey flex items-center justify-center text-gray-500 font-bold overflow-hidden border border-gray-200">
-                                {student ? <img src={student.avatarUrl} alt="" className="w-full h-full object-cover"/> : id.substring(0,2).toUpperCase()}
+        {/* ... (Existing Admin Finance, Parent tabs) ... */}
+        
+        {/* TEMPLATE EDITOR MODAL */}
+        {showTemplateModal && (
+            <div className="fixed inset-0 bg-brand-blue/20 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+                <div className="bg-white rounded-2xl p-8 w-full max-w-lg shadow-2xl relative animate-slide-up border border-gray-100 max-h-[90vh] overflow-y-auto">
+                    <button onClick={() => setShowTemplateModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 rounded-full p-1"><X size={20}/></button>
+                    
+                    <h3 className="text-xl font-display font-bold mb-1 text-brand-blue">
+                        {editingTemplateId ? 'Edit Template' : 'Create Template'}
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-6">Manage reusable message content.</p>
+
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Template Name</label>
+                            <input 
+                                type="text" 
+                                value={tplName}
+                                onChange={(e) => setTplName(e.target.value)}
+                                className={inputClass}
+                                placeholder="e.g. Fee Reminder Term 2"
+                                disabled={user?.role === UserRole.PRINCIPAL && editingTemplateId !== null} // Principal reviews only
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Category</label>
+                            <select 
+                                value={tplCategory} 
+                                onChange={(e) => setTplCategory(e.target.value as SmsCategory)}
+                                className={inputClass}
+                                disabled={user?.role === UserRole.PRINCIPAL && editingTemplateId !== null}
+                            >
+                                <option value="General">General</option>
+                                <option value="Fees">Fees & Finance</option>
+                                <option value="Exams">Academics / Exams</option>
+                                <option value="Emergency">Emergency</option>
+                                <option value="Transport">Transport</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="block text-xs font-bold text-gray-500 uppercase">Message Body</label>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => setTplPreviewMode(!tplPreviewMode)}
+                                        className="text-xs font-bold text-brand-sky flex items-center gap-1 hover:underline"
+                                    >
+                                        {tplPreviewMode ? <><EyeOff size={12}/> Edit</> : <><Eye size={12}/> Preview</>}
+                                    </button>
+                                </div>
                             </div>
-                            <div>
-                                <p className="font-bold text-gray-800 text-sm">{student ? student.name : `Student ID: ${id}`}</p>
-                                <p className="text-xs text-brand-green font-bold flex items-center gap-1"><Check size={10}/> Verified • {student ? student.grade : 'Linked'}</p>
+
+                            {!tplPreviewMode ? (
+                                <>
+                                    <div className="flex flex-wrap gap-2 mb-2 p-2 bg-gray-50 rounded-lg border border-gray-100">
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase mr-2 self-center">Insert:</span>
+                                        {['Student Name', 'Parent Name', 'Class', 'Fee Balance', 'Admission No'].map(v => (
+                                            <button 
+                                                key={v}
+                                                onClick={() => handleInsertVariable(v)}
+                                                disabled={user?.role === UserRole.PRINCIPAL && editingTemplateId !== null}
+                                                className="px-2 py-1 rounded-full bg-brand-sky/10 text-brand-blue text-xs font-bold hover:bg-brand-sky/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                {v}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <textarea 
+                                        value={tplContent}
+                                        onChange={(e) => setTplContent(e.target.value)}
+                                        className="w-full h-32 p-3 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-brand-sky/20 outline-none resize-none font-medium text-gray-700 disabled:bg-gray-50 disabled:text-gray-500"
+                                        placeholder="Type your message here..."
+                                        disabled={user?.role === UserRole.PRINCIPAL && editingTemplateId !== null}
+                                    />
+                                    <div className="text-right mt-1">
+                                        <span className={`text-xs font-bold ${tplContent.length > 160 ? 'text-brand-yellow' : 'text-gray-400'}`}>
+                                            {tplContent.length} chars ({Math.ceil(tplContent.length / 160)} SMS)
+                                        </span>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="w-full h-32 p-3 rounded-lg border border-gray-200 bg-gray-50 text-sm overflow-y-auto text-gray-600">
+                                    {getPreviewText(tplContent)}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Workflow Actions */}
+                        <div className="pt-4 flex justify-between gap-3 border-t border-gray-100">
+                            {/* Standard Actions (Cancel) */}
+                            <button onClick={() => setShowTemplateModal(false)} className="px-4 h-12 border border-gray-200 text-gray-600 rounded-[12px] font-bold hover:bg-gray-50">Cancel</button>
+                            
+                            <div className="flex gap-3">
+                                {/* PRINCIPAL APPROVAL ACTIONS */}
+                                {user?.role === UserRole.PRINCIPAL && editingTemplateId ? (
+                                    <>
+                                        {!showRejectInput ? (
+                                            <>
+                                                <button 
+                                                    onClick={() => setShowRejectInput(true)}
+                                                    className="px-4 h-12 bg-brand-red/10 text-brand-red rounded-[12px] font-bold hover:bg-brand-red/20"
+                                                >
+                                                    Reject
+                                                </button>
+                                                <button 
+                                                    onClick={() => handlePrincipalAction('APPROVE')}
+                                                    disabled={isSaving}
+                                                    className="px-6 h-12 bg-brand-green text-white rounded-[12px] font-bold shadow-lg shadow-brand-green/20 hover:bg-brand-green/90 flex items-center gap-2"
+                                                >
+                                                    {isSaving ? <Loader2 className="animate-spin" size={18}/> : <><Check size={18}/> Approve</>}
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <div className="flex flex-col gap-2 w-full animate-fade-in">
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Reason for rejection..." 
+                                                    value={rejectReason}
+                                                    onChange={(e) => setRejectReason(e.target.value)}
+                                                    className="h-10 px-3 rounded-lg border border-brand-red/30 text-sm w-full"
+                                                />
+                                                <div className="flex justify-end gap-2">
+                                                    <button onClick={() => setShowRejectInput(false)} className="text-xs text-gray-500 font-bold">Cancel</button>
+                                                    <button 
+                                                        onClick={() => handlePrincipalAction('REJECT')}
+                                                        disabled={!rejectReason}
+                                                        className="px-3 py-1 bg-brand-red text-white text-xs font-bold rounded"
+                                                    >
+                                                        Confirm Reject
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    /* ADMIN / TEACHER ACTIONS */
+                                    <>
+                                        <button 
+                                            onClick={() => handleSaveTemplate('DRAFT')}
+                                            disabled={isSaving || !tplName || !tplContent}
+                                            className="px-4 h-12 text-brand-blue font-bold hover:bg-brand-blue/5 rounded-[12px]"
+                                        >
+                                            Save Draft
+                                        </button>
+                                        <button 
+                                            onClick={() => handleSaveTemplate('PENDING_APPROVAL')} 
+                                            disabled={isSaving || !tplName || !tplContent}
+                                            className="px-6 h-12 bg-brand-blue text-white rounded-[12px] font-bold shadow-lg shadow-brand-blue/20 hover:bg-brand-blue/90 disabled:opacity-50 flex items-center gap-2"
+                                        >
+                                            {isSaving ? <Loader2 className="animate-spin" size={20}/> : <><Send size={16}/> Submit for Approval</>}
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </div>
-                        <button 
-                            onClick={() => handleUnlinkChild(id)}
-                            className="p-2 text-brand-red hover:bg-brand-red/10 rounded-full transition-colors" title="Unlink"
-                        >
-                            <Unlink size={18}/>
-                        </button>
-                        </div>
-                    );
-                 })}
-                 {(!user?.linkedStudentIds || user.linkedStudentIds.length === 0) && (
-                    <p className="text-sm text-gray-400 italic">No students linked yet.</p>
-                 )}
-              </div>
-
-              <div className="bg-gray-50 border border-gray-100 rounded-[12px] p-6">
-                 <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><LinkIcon size={18}/> Link Another Student</h4>
-                 <div className="flex gap-2">
-                    <input 
-                      type="text" 
-                      value={linkToken}
-                      onChange={(e) => setLinkToken(e.target.value)}
-                      placeholder="Enter Verification Token (e.g. ST4-XYZ)"
-                      className={inputClass}
-                    />
-                    <button 
-                      onClick={handleLinkChild}
-                      disabled={isSaving || linkToken.length < 3}
-                      className="px-6 bg-brand-blue text-white rounded-[6px] font-bold hover:bg-brand-blue/90 disabled:opacity-50"
-                    >
-                       {isSaving ? <Loader2 className="animate-spin" size={20}/> : <Plus size={20}/>}
-                    </button>
-                 </div>
-                 {linkStatus === 'SUCCESS' && <p className="text-brand-green text-xs font-bold mt-2">Student linked successfully!</p>}
-                 {linkStatus === 'ERROR' && <p className="text-brand-red text-xs font-bold mt-2">Invalid token or student already linked.</p>}
-                 <p className="text-xs text-gray-400 mt-2">Tokens are provided by the school administration office.</p>
-              </div>
-           </div>
-        )}
-
-        {/* Fallback for other role tabs just to show structure */}
-        {['ADMIN_SYSTEM', 'TEACHER_CLASS', 'TEACHER_MSG', 'PARENT_FEES'].includes(activeTab) && (
-           <div className="flex flex-col items-center justify-center h-64 text-gray-400 animate-fade-in">
-              <div className="p-4 bg-gray-50 rounded-full mb-4">
-                 <Shield size={32} />
-              </div>
-              <p className="font-bold">Restricted Configuration Area</p>
-              <p className="text-xs mt-1">Settings for this module are currently locked.</p>
-           </div>
+                    </div>
+                </div>
+            </div>
         )}
 
       </div>

@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Student, AttendanceRecord, FinanceTransaction, LeaveRequest, Competency, Assessment, StudentNote, UserProfile, SchoolEvent, EventConsent, TimetableSlot, SupportTicket, AdmissionApplication, AdmissionStage } from '../types';
+import { Student, AttendanceRecord, FinanceTransaction, LeaveRequest, Competency, Assessment, StudentNote, UserProfile, SchoolEvent, EventConsent, TimetableSlot, SupportTicket, AdmissionApplication, AdmissionStage, SmsTemplate, TransportRoute, TransportVehicle, TransportLog, StaffRecord, SystemConfig, SystemHealth } from '../types';
 import { db, AppNotification } from '../services/db';
 
 interface DataContextType {
@@ -18,6 +18,13 @@ interface DataContextType {
   timetable: TimetableSlot[];
   supportTickets: SupportTicket[];
   applications: AdmissionApplication[];
+  smsTemplates: SmsTemplate[];
+  transportRoutes: TransportRoute[];
+  transportVehicles: TransportVehicle[];
+  transportLogs: TransportLog[];
+  staffRecords: StaffRecord[];
+  systemConfig: SystemConfig | null;
+  systemHealth: SystemHealth | null;
   loading: boolean;
   addStudent: (student: Omit<Student, 'id'>) => Promise<void>;
   addTransaction: (tx: Omit<FinanceTransaction, 'id'>) => Promise<void>;
@@ -41,6 +48,12 @@ interface DataContextType {
   submitApplication: (app: Omit<AdmissionApplication, 'id'>) => Promise<void>;
   updateApplicationStage: (id: string, stage: AdmissionStage) => Promise<void>;
   enrollApplicant: (applicationId: string) => Promise<void>;
+  addSmsTemplate: (template: Omit<SmsTemplate, 'id'>) => Promise<void>;
+  updateSmsTemplate: (id: string, updates: Partial<SmsTemplate>) => Promise<void>;
+  deleteSmsTemplate: (id: string) => Promise<void>;
+  addTransportRoute: (route: Omit<TransportRoute, 'id'>) => Promise<void>;
+  addStaffRecord: (staff: Omit<StaffRecord, 'id'>) => Promise<void>;
+  updateStaffRecord: (id: string, updates: Partial<StaffRecord>) => Promise<void>;
   refresh: () => void;
 }
 
@@ -61,6 +74,14 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
   const [applications, setApplications] = useState<AdmissionApplication[]>([]);
+  const [smsTemplates, setSmsTemplates] = useState<SmsTemplate[]>([]);
+  const [transportRoutes, setTransportRoutes] = useState<TransportRoute[]>([]);
+  const [transportVehicles, setTransportVehicles] = useState<TransportVehicle[]>([]);
+  const [transportLogs, setTransportLogs] = useState<TransportLog[]>([]);
+  const [staffRecords, setStaffRecords] = useState<StaffRecord[]>([]);
+  const [systemConfig, setSystemConfig] = useState<SystemConfig | null>(null);
+  const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
+  
   const [loading, setLoading] = useState(true);
 
   // Fetch initial data
@@ -81,6 +102,12 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const tt = await db.collection('timetable').get() as TimetableSlot[];
       const st = await db.collection('support_tickets').get() as SupportTicket[];
       const app = await db.collection('admissions_applications').get() as AdmissionApplication[];
+      const tpl = await db.collection('communication_templates').get() as SmsTemplate[];
+      const tr = await db.collection('transport_routes').get() as TransportRoute[];
+      const tv = await db.collection('transport_vehicles').get() as TransportVehicle[];
+      const tl = await db.collection('transport_logs').get() as TransportLog[];
+      const stf = await db.collection('staff').get() as StaffRecord[];
+      const sysData = await db.collection('config').getConfig() as any;
       
       setStudents(s);
       setTransactions(t);
@@ -96,6 +123,13 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setTimetable(tt);
       setSupportTickets(st);
       setApplications(app);
+      setSmsTemplates(tpl);
+      setTransportRoutes(tr);
+      setTransportVehicles(tv);
+      setTransportLogs(tl);
+      setStaffRecords(stf);
+      setSystemConfig(sysData.config);
+      setSystemHealth(sysData.health);
     } catch (error) {
       console.error("Failed to fetch data", error);
     } finally {
@@ -116,7 +150,26 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const unsubscribeTimetable = db.onSnapshot('timetable', (data) => setTimetable(data));
     const unsubscribeTickets = db.onSnapshot('support_tickets', (data) => setSupportTickets(data));
     const unsubscribeApplications = db.onSnapshot('admissions_applications', (data) => setApplications(data));
+    const unsubscribeTemplates = db.onSnapshot('communication_templates', (data) => setSmsTemplates(data));
+    const unsubscribeRoutes = db.onSnapshot('transport_routes', (data) => setTransportRoutes(data));
+    const unsubscribeVehicles = db.onSnapshot('transport_vehicles', (data) => setTransportVehicles(data));
+    const unsubscribeLogs = db.onSnapshot('transport_logs', (data) => setTransportLogs(data));
+    const unsubscribeStaff = db.onSnapshot('staff', (data) => setStaffRecords(data));
     
+    // Transport Simulation Interval
+    const simInterval = setInterval(() => {
+        setTransportVehicles(prev => prev.map(v => {
+            // Simple movement logic: random nudge x/y
+            const newX = Math.max(10, Math.min(90, v.currentLocation.x + (Math.random() - 0.5) * 5));
+            const newY = Math.max(10, Math.min(90, v.currentLocation.y + (Math.random() - 0.5) * 5));
+            return {
+                ...v,
+                currentLocation: { x: newX, y: newY },
+                speed: Math.max(0, Math.min(80, v.speed + (Math.random() - 0.5) * 10)) // Fluctuate speed
+            };
+        }));
+    }, 5000); // Every 5 seconds
+
     return () => {
       unsubscribeStudents();
       unsubscribeFinance();
@@ -130,6 +183,12 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
       unsubscribeTimetable();
       unsubscribeTickets();
       unsubscribeApplications();
+      unsubscribeTemplates();
+      unsubscribeRoutes();
+      unsubscribeVehicles();
+      unsubscribeLogs();
+      unsubscribeStaff();
+      clearInterval(simInterval);
     };
   }, []);
 
@@ -321,6 +380,33 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
     });
   };
 
+  // --- SMS TEMPLATES ---
+  const addSmsTemplate = async (template: Omit<SmsTemplate, 'id'>) => {
+    await db.collection('communication_templates').add(template);
+  };
+
+  const updateSmsTemplate = async (id: string, updates: Partial<SmsTemplate>) => {
+    await db.collection('communication_templates').update(id, updates);
+  };
+
+  const deleteSmsTemplate = async (id: string) => {
+    await db.collection('communication_templates').delete(id);
+  };
+
+  // --- TRANSPORT LOGIC ---
+  const addTransportRoute = async (route: Omit<TransportRoute, 'id'>) => {
+    await db.collection('transport_routes').add(route);
+  };
+
+  // --- STAFF LOGIC ---
+  const addStaffRecord = async (staff: Omit<StaffRecord, 'id'>) => {
+    await db.collection('staff').add(staff);
+  };
+
+  const updateStaffRecord = async (id: string, updates: Partial<StaffRecord>) => {
+    await db.collection('staff').update(id, updates);
+  };
+
   return (
     <StudentDataContext.Provider value={{ 
       students, 
@@ -337,6 +423,13 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
       timetable,
       supportTickets,
       applications,
+      smsTemplates,
+      transportRoutes,
+      transportVehicles,
+      transportLogs,
+      staffRecords,
+      systemConfig,
+      systemHealth,
       loading, 
       addStudent, 
       addTransaction, 
@@ -360,6 +453,12 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
       submitApplication,
       updateApplicationStage,
       enrollApplicant,
+      addSmsTemplate,
+      updateSmsTemplate,
+      deleteSmsTemplate,
+      addTransportRoute,
+      addStaffRecord,
+      updateStaffRecord,
       refresh: fetchData
     }}>
       {children}
