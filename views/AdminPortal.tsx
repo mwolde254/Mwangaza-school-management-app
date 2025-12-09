@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { useStudentData } from '../context/StudentDataContext';
 import { useAuth } from '../context/AuthContext';
-import { FinanceTransaction, LeaveRequest, UserRole, SchoolEvent, EventType, EventAudience, LeaveType, AdmissionStage, SmsTemplate, StaffRecord, StaffRole, EmploymentStatus } from '../types';
+import { FinanceTransaction, LeaveRequest, UserRole, SchoolEvent, EventType, EventAudience, LeaveType, AdmissionStage, SmsTemplate, StaffRecord, StaffRole, EmploymentStatus, AttendanceStatus } from '../types';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from 'recharts';
 import { Check, X, CreditCard, MessageSquare, Plus, Filter, Wallet, Search, UserPlus, Users, Activity, FileText, AlertTriangle, ArrowRight, LayoutDashboard, Loader2, Trash2, Save, Send, AlertCircle, Smartphone, Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Briefcase, Stethoscope, Palmtree, Heart, Table, HelpCircle, GraduationCap, GripVertical, FileCheck, Mail, User, CheckCircle2, Bus, Map, Navigation, Fuel, Shield, Database, Server, Link, Edit3, UploadCloud, ChevronDown, History, Trophy, Star, Award } from 'lucide-react';
 import { db } from '../services/db';
@@ -14,14 +14,30 @@ import UserManagement from '../components/UserManagement';
 const COLORS = ['#1E3A8A', '#059669', '#FCD34D', '#38BDF8'];
 
 const AdminPortal: React.FC = () => {
-  const { students, transactions, leaveRequests, resolveLeaveRequest, addTransaction, addEvent, deleteEvent, events, supportTickets, resolveSupportTicket, applications, updateApplicationStage, enrollApplicant, smsTemplates, transportRoutes, transportVehicles, transportLogs, addTransportRoute, staffRecords, addStaffRecord, updateStaffRecord, systemConfig, systemHealth, users, awardPoints } = useStudentData();
+  const { students, transactions, leaveRequests, resolveLeaveRequest, addTransaction, addEvent, deleteEvent, events, supportTickets, resolveSupportTicket, applications, updateApplicationStage, enrollApplicant, smsTemplates, transportRoutes, transportVehicles, transportLogs, addTransportRoute, staffRecords, addStaffRecord, updateStaffRecord, systemConfig, systemHealth, users, awardPoints, attendance } = useStudentData();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'FINANCE' | 'SMS' | 'ALERTS' | 'USERS' | 'CALENDAR' | 'HR' | 'TIMETABLE' | 'HELPDESK' | 'ADMISSIONS' | 'TRANSPORT' | 'REWARDS'>('DASHBOARD');
 
   // -- GLOBAL METRICS --
   const totalStudents = students.length;
   const staffCount = staffRecords.length; 
-  const attendanceRate = 92; // Mock
+  
+  // Real Attendance Calculation (Today)
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const todaysAttendance = attendance.filter(a => a.date === todayStr);
+  const presentToday = todaysAttendance.filter(a => a.status === AttendanceStatus.PRESENT).length;
+  // If no attendance taken, assume 0 rate or hide. If taken, calculate rate.
+  // We'll calculate rate based on students who have a record for today.
+  const attendanceRate = todaysAttendance.length > 0 
+    ? Math.round((presentToday / todaysAttendance.length) * 100) 
+    : 0;
+
+  // Real Staff Absent Calculation
+  const staffAbsentToday = leaveRequests.filter(req => 
+    req.status === 'APPROVED' && 
+    new Date(req.startDate) <= new Date() && 
+    new Date(req.endDate) >= new Date()
+  ).length;
 
   // -- FINANCE DATA --
   const totalCollected = transactions.reduce((acc, curr) => acc + curr.amount, 0);
@@ -48,7 +64,6 @@ const AdminPortal: React.FC = () => {
 
   // -- ALERTS DATA --
   const pendingLeaves = leaveRequests.filter(req => req.status === 'PENDING');
-  const staffAbsentToday = 3; // Mock
 
   // -- SMS LOGIC & STATE --
   const [smsMessage, setSmsMessage] = useState('');
@@ -456,18 +471,12 @@ const AdminPortal: React.FC = () => {
     }
   };
 
-  // Mock Performance Data
+  // Mock Performance Data (Still mocked as this requires complex aggregating of multiple collections not in scope for simple context)
   const staffUtilizationData = [
     { name: 'Teacher A', load: 85, target: 80 },
     { name: 'Teacher B', load: 60, target: 80 },
     { name: 'Teacher C', load: 95, target: 80 },
     { name: 'Teacher D', load: 40, target: 80 },
-  ];
-
-  const activeUsers = [
-    { name: 'Tr. Sarah', activity: 90 },
-    { name: 'Tr. John', activity: 75 },
-    { name: 'Tr. Mary', activity: 60 },
   ];
 
   const inputClass = "w-full h-12 px-4 rounded-lg border border-gray-200 focus:border-brand-sky focus:ring-2 focus:ring-brand-sky/20 outline-none transition-all font-medium text-gray-700 bg-white hover:border-brand-sky/50 disabled:bg-gray-100 disabled:cursor-not-allowed";
@@ -592,13 +601,24 @@ const AdminPortal: React.FC = () => {
                  </div>
               </div>
 
-              {/* Pending Leaves */}
+              {/* Pending Leaves & Alerts */}
               <div className={cardBase}>
                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-display font-bold text-lg text-gray-800">Pending Approvals</h3>
+                    <h3 className="font-display font-bold text-lg text-gray-800">Alerts & Approvals</h3>
                     <button onClick={() => setActiveTab('ALERTS')} className="text-xs font-bold text-brand-blue hover:underline">View All</button>
                  </div>
                  <div className="space-y-3">
+                    {/* Staff Absence Alert */}
+                    {staffAbsentToday > 0 && (
+                        <div className="flex justify-between items-center p-3 bg-brand-red/5 rounded-lg border border-brand-red/20">
+                            <div className="flex items-center gap-2">
+                                <User size={16} className="text-brand-red"/>
+                                <p className="text-sm font-bold text-gray-700">{staffAbsentToday} Staff Absent Today</p>
+                            </div>
+                            <span className="text-xs font-bold bg-brand-red text-white px-2 py-1 rounded">ALERT</span>
+                        </div>
+                    )}
+
                     {pendingLeaves.length > 0 ? pendingLeaves.slice(0, 3).map(l => (
                         <div key={l.id} className="flex justify-between items-center p-3 bg-brand-yellow/5 rounded-lg border border-brand-yellow/20">
                             <div>
@@ -608,7 +628,7 @@ const AdminPortal: React.FC = () => {
                             <span className="text-xs font-bold bg-brand-yellow text-brand-blue px-2 py-1 rounded">PENDING</span>
                         </div>
                     )) : (
-                        <p className="text-center text-gray-400 italic py-4">No pending approvals.</p>
+                        staffAbsentToday === 0 && <p className="text-center text-gray-400 italic py-4">No pending alerts.</p>
                     )}
                  </div>
               </div>

@@ -12,6 +12,17 @@ export interface LeaveBalance {
   compassionate: { total: number; used: number };
 }
 
+export interface UserPreferences {
+  theme?: 'LIGHT' | 'DARK' | 'SYSTEM';
+  language?: string;
+  currency?: string;
+  timezone?: string;
+  notifications?: any; // Structured notification config
+  adminFinance?: { apiKey?: string; apiSecret?: string; provider?: string };
+  teacherDefaultClass?: string;
+  parentFeeThreshold?: number;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -23,6 +34,7 @@ export interface UserProfile {
   linkedStudentIds?: string[]; // For parents
   leaveBalances?: LeaveBalance; // New for staff
   totalPoints?: number; // Gamification Score
+  preferences?: UserPreferences;
 }
 
 // --- HR & STAFF TYPES ---

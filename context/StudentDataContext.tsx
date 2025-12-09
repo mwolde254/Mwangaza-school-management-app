@@ -40,6 +40,7 @@ interface DataContextType {
   submitAttendance: (records: AttendanceRecord[]) => Promise<void>;
   addAssessment: (assessment: Omit<Assessment, 'id'>) => Promise<void>;
   updateAssessment: (id: string, updates: Partial<Assessment>) => Promise<void>;
+  addCompetency: (competency: Omit<Competency, 'id'>) => Promise<void>;
   addStudentNote: (note: Omit<StudentNote, 'id'>) => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
   updateUser: (id: string, updates: Partial<UserProfile>) => Promise<void>;
@@ -135,10 +136,6 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
       for (const item of queue) {
         try {
           if (item.type === 'CREATE') {
-            // Remove the temp ID from the payload so DB assigns a real one (or DB uses provided ID if we want consistency)
-            // Here, our db.add assigns a new ID, but we want to map it? 
-            // Simplified: Just add it.
-            // Remove temp ID if it was added for local key
             const { id, ...cleanPayload } = item.payload; 
             await db.collection(item.collection).add(cleanPayload);
           } else if (item.type === 'UPDATE' && item.docId) {
@@ -150,7 +147,6 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
           OfflineDB.removeFromQueue(item.id);
         } catch (error) {
           console.error("Sync failed for item", item, error);
-          // Stop syncing on error to prevent data corruption order
           break; 
         }
       }
@@ -160,8 +156,8 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
     };
 
     if (isOnline) {
-      syncData(); // Trigger immediately on online
-      syncInterval = setInterval(syncData, 10000); // And periodically
+      syncData(); 
+      syncInterval = setInterval(syncData, 10000); 
     }
 
     return () => clearInterval(syncInterval);
@@ -170,22 +166,15 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Helper to handle offline/online writes
   const performWrite = async (collection: string, type: 'CREATE' | 'UPDATE' | 'DELETE', payload: any, docId?: string) => {
     if (!isOnline) {
-      // 1. Save to Offline Queue
       const offlineItem = OfflineDB.addToQueue({
         collection,
         type,
-        payload: { ...payload, id: docId || `temp_${Date.now()}` }, // Ensure temp ID for local create
+        payload: { ...payload, id: docId || `temp_${Date.now()}` },
         docId
       });
       setPendingChanges(prev => prev + 1);
-      
-      // 2. Optimistic UI Update happens automatically via db.onSnapshot because we modified services/db.ts getCollection 
-      // to merge the Offline Queue! So no manual state update needed here.
-      // However, we trigger a refresh of the snapshot listeners essentially by waiting for the polling in db.ts
-      
       return offlineItem; 
     } else {
-      // Online: Direct DB Call
       if (type === 'CREATE') return await db.collection(collection).add(payload);
       if (type === 'UPDATE' && docId) return await db.collection(collection).update(docId, payload);
       if (type === 'DELETE' && docId) return await db.collection(collection).delete(docId);
@@ -197,8 +186,6 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setLoading(true);
     try {
       const s = await db.collection('students').get() as Student[];
-      // ... (rest of fetch logic remains, but simplified here as listeners handle updates)
-      // We rely on listeners primarily now
     } catch (error) {
       console.error("Failed to fetch data", error);
     } finally {
@@ -230,7 +217,6 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
       db.onSnapshot('points', setPointsLogs)
     ];
     
-    // Transport Sim
     const simInterval = setInterval(() => {
         setTransportVehicles(prev => prev.map(v => {
             const newX = Math.max(10, Math.min(90, v.currentLocation.x + (Math.random() - 0.5) * 5));
@@ -261,8 +247,6 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const addTransaction = async (tx: Omit<FinanceTransaction, 'id'>) => {
     await performWrite('finance', 'CREATE', tx);
-    // Optimistic balance update for student?
-    // In offline mode, the student record update needs to be queued too
     const student = students.find(s => s.id === tx.studentId);
     if (student) {
       await performWrite('students', 'UPDATE', { balance: student.balance - tx.amount }, student.id);
@@ -274,11 +258,7 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const submitAttendance = async (records: AttendanceRecord[]) => {
-    // Batch writes simulated by looping
     for (const record of records) {
-        // Check if updating existing record for today? 
-        // For simplicity, we just add new records or overwrite if ID matches
-        // But offline queue expects single items.
         await performWrite('attendance', 'CREATE', record);
     }
   };
@@ -289,6 +269,10 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const updateAssessment = async (id: string, updates: Partial<Assessment>) => {
     await performWrite('assessments', 'UPDATE', updates, id);
+  }
+
+  const addCompetency = async (competency: Omit<Competency, 'id'>) => {
+    await performWrite('competencies', 'CREATE', competency);
   }
 
   const addStudentNote = async (note: Omit<StudentNote, 'id'>) => {
@@ -322,8 +306,6 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const resolveLeaveRequest = async (id: string, status: 'APPROVED' | 'REJECTED', reason?: string, addToCalendar?: boolean) => {
     await performWrite('leave_requests', 'UPDATE', { status, rejectionReason: reason }, id);
     
-    // Logic for notifications and calendar is complex to fully replicate offline atomically without cloud functions
-    // We will simulate the notification creation offline too
     const request = leaveRequests.find(r => r.id === id);
     if (request) {
         await performWrite('notifications', 'CREATE', {
@@ -437,7 +419,6 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const awardPoints = async (targetId: string, role: 'STUDENT' | 'TEACHER', points: number, reason: string, awardedBy: string) => {
-    // 1. Create Log
     await performWrite('points', 'CREATE', {
         userId: targetId,
         role,
@@ -447,7 +428,6 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
         awardedBy
     });
 
-    // 2. Optimistic Update of Total
     if (role === 'STUDENT') {
         const student = students.find(s => s.id === targetId);
         if (student) {
@@ -471,7 +451,7 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
       loading, 
       connectionStatus: connectionState,
       pendingChanges,
-      addStudent, addTransaction, updateLeaveRequest, submitAttendance, addAssessment, updateAssessment, addStudentNote, markNotificationRead, updateUser, addEvent, deleteEvent, submitConsent, submitLeaveRequest, resolveLeaveRequest, addTimetableSlot, deleteTimetableSlot, checkTimetableConflict, addSupportTicket, resolveSupportTicket, submitApplication, updateApplicationStage, enrollApplicant, addSmsTemplate, updateSmsTemplate, deleteSmsTemplate, addTransportRoute, addStaffRecord, updateStaffRecord, awardPoints,
+      addStudent, addTransaction, updateLeaveRequest, submitAttendance, addAssessment, updateAssessment, addCompetency, addStudentNote, markNotificationRead, updateUser, addEvent, deleteEvent, submitConsent, submitLeaveRequest, resolveLeaveRequest, addTimetableSlot, deleteTimetableSlot, checkTimetableConflict, addSupportTicket, resolveSupportTicket, submitApplication, updateApplicationStage, enrollApplicant, addSmsTemplate, updateSmsTemplate, deleteSmsTemplate, addTransportRoute, addStaffRecord, updateStaffRecord, awardPoints,
       refresh: fetchData
     }}>
       {children}

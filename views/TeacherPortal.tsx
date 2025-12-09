@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useStudentData } from '../context/StudentDataContext';
 import { useAuth } from '../context/AuthContext';
 import { AttendanceStatus, AttendanceRecord, Competency, LeaveType } from '../types';
@@ -9,27 +9,38 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import TimetableModule from '../components/TimetableModule';
 
 const TeacherPortal: React.FC = () => {
-  const { students, submitAttendance, assessments, addAssessment, updateAssessment, attendance, competencies, addStudent, events, leaveRequests, submitLeaveRequest, users, awardPoints } = useStudentData(); 
+  const { students, submitAttendance, assessments, addAssessment, updateAssessment, attendance, competencies, addCompetency, events, leaveRequests, submitLeaveRequest, users, awardPoints } = useStudentData(); 
   const { user } = useAuth();
   const [mode, setMode] = useState<'DASHBOARD' | 'ATTENDANCE' | 'ASSESSMENT' | 'COMPETENCY' | 'LEAVE' | 'TIMETABLE'>('DASHBOARD');
   const [selectedClass, setSelectedClass] = useState('Grade 4 - Mathematics');
   
   // -- DASHBOARD METRICS CALCULATION --
-  
-  // Attendance Summary
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const todaysAttendance = attendance.filter(a => a.date === todayStr);
   const totalStudents = students.length;
-  const presentCount = Math.floor(totalStudents * 0.8); 
-  const lateCount = Math.floor(totalStudents * 0.1);
-  const absentCount = totalStudents - presentCount - lateCount;
+  
+  const presentCount = todaysAttendance.filter(a => a.status === AttendanceStatus.PRESENT).length;
+  const lateCount = todaysAttendance.filter(a => a.status === AttendanceStatus.LATE).length;
+  const absentCount = todaysAttendance.filter(a => a.status === AttendanceStatus.ABSENT).length;
+  // If no attendance taken yet, assume all absent or 0 for display? 
+  // Let's rely on actual records. If record count < total students, the rest are "Pending" technically, but UI shows Absent/Late/Present.
+  // For dashboard visual, if no records, maybe show 0s or assume pending. The previous mock assumed 80% present.
+  // We will stick to actual counts.
 
   // CBC Summary
-  const emergingCompetencies = competencies.filter(c => c.rating === 'Emerging');
-  const recentCompetenciesCount = competencies.length; 
-  const cbcProgress = 65; 
+  const recentCompetencies = competencies.filter(c => true); // In real app, filter by date range
+  const emergingCompetencies = recentCompetencies.filter(c => c.rating === 'Emerging');
+  const recentCompetenciesCount = recentCompetencies.length; 
+  const cbcProgress = Math.min(100, Math.round((recentCompetenciesCount / (totalStudents * 5)) * 100)) || 0; // Mock target of 5 comps per student
 
   // Assessment Summary
-  const avgScore = Math.round(assessments.reduce((acc, curr) => acc + curr.score, 0) / (assessments.length || 1));
-  const ungradedCount = 5; 
+  const totalAssessments = assessments.length;
+  const avgScore = totalAssessments > 0 
+    ? Math.round(assessments.reduce((acc, curr) => acc + curr.score, 0) / totalAssessments) 
+    : 0;
+  // Ungraded count approximation (assuming 2 subjects per student target)
+  const expectedAssessments = totalStudents * 2; 
+  const ungradedCount = Math.max(0, expectedAssessments - totalAssessments);
 
   // Schedule Logic
   const today = new Date();
@@ -37,11 +48,21 @@ const TeacherPortal: React.FC = () => {
   const tomorrowsEvents = events.filter(e => isSameDay(new Date(e.startDate), addDays(today, 1)));
 
   // -- ACTION STATE MANAGEMENT --
-  const [attendanceState, setAttendanceState] = useState<Record<string, { status: AttendanceStatus, minutes: number }>>(() => {
+  // Initialize with existing data if available for today
+  const [attendanceState, setAttendanceState] = useState<Record<string, { status: AttendanceStatus, minutes: number }>>({});
+
+  useEffect(() => {
     const initial: any = {};
-    students.forEach(s => initial[s.id] = { status: AttendanceStatus.PRESENT, minutes: 0 });
-    return initial;
-  });
+    students.forEach(s => {
+        const existingRecord = attendance.find(a => a.studentId === s.id && a.date === todayStr);
+        if (existingRecord) {
+            initial[s.id] = { status: existingRecord.status, minutes: existingRecord.minutesLate || 0 };
+        } else {
+            initial[s.id] = { status: AttendanceStatus.PRESENT, minutes: 0 };
+        }
+    });
+    setAttendanceState(initial);
+  }, [students, attendance, todayStr]);
 
   const [saving, setSaving] = useState(false);
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
@@ -108,16 +129,15 @@ const TeacherPortal: React.FC = () => {
         const records: AttendanceRecord[] = students.map(student => {
             const data = attendanceState[student.id] || { status: AttendanceStatus.PRESENT, minutes: 0 };
             return {
-                id: Math.random().toString(36),
+                id: Math.random().toString(36), // In real backend, this ID generation happens there
                 studentId: student.id,
-                date: format(new Date(), 'yyyy-MM-dd'),
+                date: todayStr,
                 status: data.status,
                 minutesLate: data.status === AttendanceStatus.LATE ? data.minutes : undefined
             };
         });
 
         await submitAttendance(records);
-        // Award points for perfect attendance? Simulated here
         showNotification("Attendance submitted successfully!", "success");
         setTimeout(() => setMode('DASHBOARD'), 1500);
     } catch (e) {
@@ -173,8 +193,8 @@ const TeacherPortal: React.FC = () => {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [mathScore, setMathScore] = useState(0);
   const [englishScore, setEnglishScore] = useState(0);
-  const [competencyStrand, setCompetencyStrand] = useState('');
-  const [competencyRating, setCompetencyRating] = useState('Meeting Expectation');
+  const [competencyStrand, setCompetencyStrand] = useState('Numbers & Operations');
+  const [competencyRating, setCompetencyRating] = useState<'Emerging' | 'Developing' | 'Meeting Expectation' | 'Exceeding'>('Meeting Expectation');
 
   const openAssessment = (studentId: string) => {
     setSelectedStudentId(studentId);
@@ -203,7 +223,35 @@ const TeacherPortal: React.FC = () => {
   const handleSaveAssessment = async () => {
     if (!selectedStudentId) return;
     setSaving(true);
-    await new Promise(r => setTimeout(r, 1000));
+    
+    // Save Math
+    const existingMath = assessments.find(a => a.studentId === selectedStudentId && a.subject === 'Mathematics');
+    if (existingMath) {
+        await updateAssessment(existingMath.id, { score: mathScore });
+    } else {
+        await addAssessment({
+            studentId: selectedStudentId,
+            subject: 'Mathematics',
+            score: mathScore,
+            total: 100,
+            comments: 'Recorded by teacher'
+        });
+    }
+
+    // Save English
+    const existingEng = assessments.find(a => a.studentId === selectedStudentId && a.subject === 'English');
+    if (existingEng) {
+        await updateAssessment(existingEng.id, { score: englishScore });
+    } else {
+        await addAssessment({
+            studentId: selectedStudentId,
+            subject: 'English',
+            score: englishScore,
+            total: 100,
+            comments: 'Recorded by teacher'
+        });
+    }
+
     setSaving(false);
     setShowModal(false);
     showNotification("Assessment marks updated!", "success");
@@ -212,7 +260,15 @@ const TeacherPortal: React.FC = () => {
   const handleSaveCompetency = async () => {
     if (!selectedStudentId) return;
     setSaving(true);
-    await new Promise(r => setTimeout(r, 1000));
+    
+    await addCompetency({
+        studentId: selectedStudentId,
+        subject: 'Mathematics', // Defaulting to currently selected subject context
+        strand: competencyStrand,
+        rating: competencyRating,
+        notes: 'Observed in class'
+    });
+
     setSaving(false);
     setShowModal(false);
     showNotification("Competency recorded!", "success");
@@ -463,13 +519,16 @@ const TeacherPortal: React.FC = () => {
 
                 <div className="space-y-2">
                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">Needs Review / Emerging</h4>
-                   {emergingCompetencies.length > 0 ? emergingCompetencies.slice(0, 3).map((comp, idx) => (
+                   {emergingCompetencies.length > 0 ? emergingCompetencies.slice(0, 3).map((comp, idx) => {
+                     const student = students.find(s => s.id === comp.studentId);
+                     return (
                      <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
                         <div className="flex items-center gap-3">
-                           {/* Finding student name from ID would require lookup, simplified for mock */}
-                           <div className="w-8 h-8 rounded-full bg-brand-yellow/20 flex items-center justify-center text-brand-yellow font-bold text-xs">?</div>
+                           <div className="w-8 h-8 rounded-full bg-brand-yellow/20 flex items-center justify-center text-brand-yellow font-bold text-xs">
+                               {student ? student.name[0] : '?'}
+                           </div>
                            <div>
-                             <p className="text-xs font-bold text-gray-700">{comp.subject}</p>
+                             <p className="text-xs font-bold text-gray-700">{student?.name || 'Unknown'}</p>
                              <p className="text-[10px] text-gray-500">{comp.strand}</p>
                            </div>
                         </div>
@@ -480,7 +539,7 @@ const TeacherPortal: React.FC = () => {
                            </button>
                         </div>
                      </div>
-                   )) : (
+                   )}) : (
                      <p className="text-xs text-gray-400 italic">No emerging competencies flagged.</p>
                    )}
                 </div>
@@ -795,7 +854,7 @@ const TeacherPortal: React.FC = () => {
                        {['Emerging', 'Developing', 'Meeting Expectation', 'Exceeding'].map(lvl => (
                          <div 
                            key={lvl}
-                           onClick={() => setCompetencyRating(lvl)}
+                           onClick={() => setCompetencyRating(lvl as any)}
                            className={`p-3 rounded-lg border cursor-pointer flex items-center justify-between transition-all ${competencyRating === lvl ? 'bg-brand-blue/5 border-brand-blue ring-1 ring-brand-blue' : 'bg-white border-gray-200 hover:border-brand-sky/50'}`}
                          >
                            <span className={`text-sm font-bold ${competencyRating === lvl ? 'text-brand-blue' : 'text-gray-600'}`}>{lvl}</span>

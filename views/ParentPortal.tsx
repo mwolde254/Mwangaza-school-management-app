@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useStudentData } from '../context/StudentDataContext';
 import { useAuth } from '../context/AuthContext';
@@ -10,7 +11,7 @@ import TimetableModule from '../components/TimetableModule';
 import { TicketCategory } from '../types';
 
 const ParentPortal: React.FC = () => {
-  const { students, transactions, attendance, competencies, events, consents, submitConsent, supportTickets, addSupportTicket, transportRoutes, transportVehicles } = useStudentData();
+  const { students, transactions, attendance, competencies, events, consents, submitConsent, supportTickets, addSupportTicket, transportRoutes, transportVehicles, pointsLogs } = useStudentData();
   const { user } = useAuth();
   
   const [mode, setMode] = useState<'DASHBOARD' | 'SUPPORT'>('DASHBOARD');
@@ -52,6 +53,9 @@ const ParentPortal: React.FC = () => {
   const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
   const [expandedTicketId, setExpandedTicketId] = useState<string | null>(null);
 
+  // Achievement Modal State
+  const [showAchievementsModal, setShowAchievementsModal] = useState(false);
+
   const [toast, setToast] = useState<string | null>(null);
   
   const activeChild = myChildren.find(c => c.id === activeChildId) || myChildren[0];
@@ -71,6 +75,10 @@ const ParentPortal: React.FC = () => {
   const checkConsentStatus = (eventId: string) => {
       return consents.some(c => c.eventId === eventId && c.studentId === activeChildId && c.status === 'SIGNED');
   };
+
+  const activeChildPoints = useMemo(() => {
+      return pointsLogs.filter(p => p.userId === activeChildId).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [pointsLogs, activeChildId]);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -256,7 +264,10 @@ const ParentPortal: React.FC = () => {
                     <p className="text-xs text-blue-100">Top 10% in class! Keep it up.</p>
                 </div>
                 
-                <button className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold text-white transition-colors flex items-center justify-center gap-2 mt-4">
+                <button 
+                    onClick={() => setShowAchievementsModal(true)}
+                    className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold text-white transition-colors flex items-center justify-center gap-2 mt-4"
+                >
                     <Star size={14}/> View Achievements
                 </button>
             </div>
@@ -287,297 +298,293 @@ const ParentPortal: React.FC = () => {
 
             {/* 3. ATTENDANCE WIDGET */}
             <div className="md:col-span-4 bg-white rounded-[12px] shadow-sm border border-gray-100 p-6 flex flex-col justify-between h-full min-h-[220px]">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Attendance</p>
-                        <p className="text-3xl font-display font-bold text-gray-800">{attendanceRate}%</p>
-                        <p className="text-xs text-gray-500 mt-1">Present {presentDays} of {totalDays} days</p>
-                    </div>
-                    <div className="h-16 w-16">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={[{ value: attendanceRate, color: '#059669' }, { value: 100 - attendanceRate, color: '#F3F4F6' }]}
-                                    innerRadius={20}
-                                    outerRadius={30}
-                                    dataKey="value"
-                                    startAngle={90}
-                                    endAngle={-270}
-                                >
-                                    <Cell fill="#059669" />
-                                    <Cell fill="#F3F4F6" />
-                                </Pie>
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-                <div className="mt-4 pt-4 border-t border-gray-50 flex flex-col gap-2">
-                    <div className="flex justify-between items-center text-xs text-gray-600">
-                        <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-brand-green"></div> Present</span>
-                        <span className="font-bold">{presentDays}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs text-gray-600">
-                        <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-brand-red"></div> Absent</span>
-                        <span className="font-bold">{totalDays - presentDays}</span>
-                    </div>
-                </div>
+               <div className="flex justify-between items-start mb-2">
+                  <div className="p-3 bg-brand-sky/10 text-brand-sky rounded-xl">
+                     <Calendar size={24}/>
+                  </div>
+               </div>
+               <div>
+                  <div className="flex items-end gap-2 mb-1">
+                     <span className="text-3xl font-display font-bold text-gray-800">{attendanceRate}%</span>
+                     <span className="text-xs text-gray-400 font-bold mb-2">Attendance</span>
+                  </div>
+                  <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden mb-2">
+                     <div style={{ width: `${attendanceRate}%` }} className="h-full bg-brand-sky"></div>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                     Present {presentDays} of {totalDays} days.
+                  </p>
+               </div>
             </div>
 
-            {/* 4. UPCOMING EVENTS & CONSENT */}
-            <div className="md:col-span-8 bg-white rounded-[12px] shadow-sm border border-gray-100 p-6">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="font-display font-bold text-lg text-gray-800 flex items-center gap-2">
-                        <Calendar size={20} className="text-brand-blue"/> Upcoming Events
-                    </h3>
-                </div>
-                <div className="space-y-4">
-                    {upcomingEvents.length > 0 ? upcomingEvents.map(event => {
-                        const hasConsent = checkConsentStatus(event.id);
-                        return (
-                            <div key={event.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 gap-4">
-                                <div className="flex items-start gap-4">
-                                    <div className="flex flex-col items-center justify-center bg-white p-2 rounded-lg border border-gray-200 w-16 h-16 shrink-0">
-                                        <span className="text-xs font-bold text-brand-red uppercase">{format(new Date(event.startDate), 'MMM')}</span>
-                                        <span className="text-xl font-display font-bold text-gray-800">{format(new Date(event.startDate), 'dd')}</span>
-                                    </div>
-                                    <div>
-                                        <h4 className="font-bold text-gray-800 text-sm mb-1">{event.title}</h4>
-                                        <p className="text-xs text-gray-500 line-clamp-1">{event.description || 'No details provided.'}</p>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            {event.requiresPayment && (
-                                                <span className="text-[10px] font-bold bg-brand-yellow/10 text-brand-yellow-700 px-2 py-0.5 rounded">
-                                                    Cost: KES {event.cost}
-                                                </span>
-                                            )}
-                                            {event.requiresConsent && (
-                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${hasConsent ? 'bg-brand-green/10 text-brand-green' : 'bg-brand-red/10 text-brand-red'}`}>
-                                                    {hasConsent ? 'Consent Signed' : 'Consent Needed'}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-2 self-end md:self-center">
-                                    {event.requiresConsent && !hasConsent && (
-                                        <button 
-                                            onClick={() => handleSignConsent(event.id)}
-                                            className="px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs font-bold hover:border-brand-green hover:text-brand-green transition-colors"
-                                        >
-                                            Sign Consent
-                                        </button>
-                                    )}
-                                    {event.requiresPayment && (
-                                        <button 
-                                            onClick={() => handlePayTrip(event)}
-                                            className="px-4 py-2 bg-brand-blue text-white rounded-lg text-xs font-bold hover:bg-brand-blue/90 shadow-lg shadow-brand-blue/20"
-                                        >
-                                            Pay Now
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    }) : (
-                        <div className="text-center py-8 text-gray-400 text-sm italic">
-                            No upcoming events scheduled.
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* 5. TIMETABLE PREVIEW */}
-            <div className="md:col-span-4 bg-white rounded-[12px] shadow-sm border border-gray-100 p-6 flex flex-col">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-display font-bold text-lg text-gray-800 flex items-center gap-2">
-                        <Clock size={20} className="text-brand-blue"/> Today's Classes
-                    </h3>
-                </div>
-                <div className="flex-1 overflow-hidden">
-                    <TimetableModule mode="PARENT" targetClass={activeChild.grade} />
-                </div>
-            </div>
-
-            {/* 6. TRANSPORT STATUS */}
+            {/* TRANSPORT SECTION */}
             {activeRoute && (
-                <div className="md:col-span-12 bg-white rounded-[12px] shadow-sm border border-gray-100 p-6">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-display font-bold text-lg text-gray-800 flex items-center gap-2">
-                            <Bus size={20} className="text-brand-yellow"/> Transport Status
-                        </h3>
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${activeVehicle?.status === 'ON_ROUTE' ? 'bg-brand-green/10 text-brand-green' : 'bg-gray-100 text-gray-500'}`}>
-                            {activeVehicle?.status.replace('_', ' ') || 'OFFLINE'}
-                        </span>
-                    </div>
-                    <div className="flex flex-col md:flex-row gap-6 items-center">
-                        <div className="flex-1 space-y-2 w-full">
-                            <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
-                                <span className="text-xs text-gray-500">Route</span>
-                                <span className="text-xs font-bold text-gray-800">{activeRoute.name}</span>
-                            </div>
-                            <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
-                                <span className="text-xs text-gray-500">Driver</span>
-                                <span className="text-xs font-bold text-gray-800">{activeRoute.driverName}</span>
-                            </div>
-                            <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
-                                <span className="text-xs text-gray-500">Vehicle</span>
-                                <span className="text-xs font-bold text-gray-800">{activeRoute.vehicleNumber}</span>
-                            </div>
-                        </div>
-                        {activeVehicle && (
-                            <div className="flex-1 w-full bg-brand-blue/5 rounded-xl p-4 flex items-center justify-center gap-4 border border-brand-blue/10">
-                                <div className="text-center">
-                                    <p className="text-xs font-bold text-gray-400 uppercase mb-1">Next Stop</p>
-                                    <p className="text-lg font-bold text-brand-blue">{activeVehicle.nextStop}</p>
-                                </div>
-                                <div className="h-10 w-px bg-gray-200"></div>
-                                <div className="text-center">
-                                    <p className="text-xs font-bold text-gray-400 uppercase mb-1">ETA</p>
-                                    <p className="text-lg font-bold text-brand-green font-mono">{activeVehicle.etaToNextStop}</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
+               <div className="md:col-span-6 bg-white rounded-[12px] shadow-sm border border-gray-100 overflow-hidden">
+                  <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                     <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                        <Bus size={16} className="text-brand-blue"/> Transport Status
+                     </h3>
+                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                        activeVehicle?.status === 'ON_ROUTE' ? 'bg-brand-green/10 text-brand-green' : 'bg-gray-200 text-gray-500'
+                     }`}>
+                        {activeVehicle?.status?.replace('_', ' ') || 'IDLE'}
+                     </span>
+                  </div>
+                  <div className="p-4 relative">
+                     {activeVehicle ? (
+                        <>
+                           <div className="flex justify-between items-center mb-4">
+                              <div>
+                                 <p className="text-xs text-gray-400 uppercase font-bold">Route</p>
+                                 <p className="font-bold text-gray-800">{activeRoute.name}</p>
+                              </div>
+                              <div className="text-right">
+                                 <p className="text-xs text-gray-400 uppercase font-bold">ETA Next Stop</p>
+                                 <p className="font-bold text-brand-blue">{activeVehicle.etaToNextStop}</p>
+                              </div>
+                           </div>
+                           <div className="h-24 bg-gray-100 rounded-lg relative overflow-hidden flex items-center justify-center">
+                              {/* Mock Map View */}
+                              <div className="absolute inset-0 opacity-20" style={{backgroundImage: 'radial-gradient(#1E3A8A 1px, transparent 1px)', backgroundSize: '10px 10px'}}></div>
+                              <div className="flex items-center gap-2 relative z-10 bg-white px-3 py-1 rounded-full shadow-sm">
+                                 <MapPin size={12} className="text-brand-red"/>
+                                 <span className="text-xs font-bold text-gray-700">Near {activeVehicle.nextStop}</span>
+                              </div>
+                           </div>
+                        </>
+                     ) : (
+                        <div className="text-center py-4 text-gray-400 text-xs italic">Bus is currently idle.</div>
+                     )}
+                  </div>
+               </div>
             )}
+
+            {/* UPCOMING EVENTS */}
+            <div className={`md:col-span-${activeRoute ? '6' : '8'} bg-white rounded-[12px] shadow-sm border border-gray-100 overflow-hidden`}>
+               <div className="p-4 border-b border-gray-100 bg-gray-50">
+                  <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                     <Calendar size={16} className="text-brand-blue"/> Upcoming Events
+                  </h3>
+               </div>
+               <div className="p-4 space-y-3">
+                  {upcomingEvents.length > 0 ? upcomingEvents.map(evt => (
+                     <div key={evt.id} className="flex gap-4 items-start p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
+                        <div className="flex flex-col items-center justify-center w-12 h-12 bg-brand-blue/5 text-brand-blue rounded-lg shrink-0">
+                           <span className="text-[10px] font-bold uppercase">{format(new Date(evt.startDate), 'MMM')}</span>
+                           <span className="text-lg font-bold leading-none">{format(new Date(evt.startDate), 'd')}</span>
+                        </div>
+                        <div className="flex-1">
+                           <h4 className="font-bold text-sm text-gray-800">{evt.title}</h4>
+                           <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] text-gray-500 bg-gray-100 px-1.5 rounded">{evt.type}</span>
+                              {evt.requiresConsent && (
+                                 checkConsentStatus(evt.id) ? (
+                                    <span className="text-[10px] text-brand-green font-bold flex items-center gap-1"><Check size={10}/> Signed</span>
+                                 ) : (
+                                    <button 
+                                       onClick={() => handleSignConsent(evt.id)}
+                                       className="text-[10px] text-brand-red font-bold hover:underline"
+                                    >
+                                       Sign Consent
+                                    </button>
+                                 )
+                              )}
+                           </div>
+                        </div>
+                        {evt.requiresPayment && evt.cost && (
+                           <button 
+                              onClick={() => handlePayTrip(evt)}
+                              className="px-3 py-1.5 bg-brand-blue text-white text-xs font-bold rounded-lg hover:bg-brand-blue/90"
+                           >
+                              Pay {evt.cost}
+                           </button>
+                        )}
+                     </div>
+                  )) : (
+                     <p className="text-xs text-gray-400 italic text-center py-4">No upcoming events.</p>
+                  )}
+               </div>
+            </div>
+
+            {/* TIMETABLE PREVIEW */}
+            <div className="md:col-span-12 bg-white rounded-[12px] shadow-sm border border-gray-100 p-6">
+                <TimetableModule mode="PARENT" targetClass={activeChild.grade} />
+            </div>
 
         </div>
       )}
 
       {/* === SUPPORT MODE === */}
       {mode === 'SUPPORT' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up">
-              {/* Ticket History */}
-              <div className="bg-white rounded-[12px] shadow-sm border border-gray-100 p-6 flex flex-col h-[600px]">
-                  <h3 className="font-display font-bold text-lg text-gray-800 mb-6 flex items-center gap-2">
-                      <MessageSquare size={20} className="text-brand-blue"/> My Tickets
-                  </h3>
-                  <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4">
-                      {myTickets.length > 0 ? myTickets.map(ticket => (
-                          <div key={ticket.id} className="border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors">
-                              <div className="flex justify-between items-start mb-2">
-                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${ticket.status === 'OPEN' ? 'bg-brand-yellow/10 text-brand-yellow-700' : 'bg-brand-green/10 text-brand-green'}`}>
-                                      {ticket.status}
-                                  </span>
-                                  <span className="text-[10px] text-gray-400">{format(new Date(ticket.date), 'dd MMM yyyy')}</span>
-                              </div>
-                              <h4 className="font-bold text-sm text-gray-800 mb-1">{ticket.subject}</h4>
-                              <p className="text-xs text-gray-500 line-clamp-2">{ticket.message}</p>
-                              
-                              <button 
-                                onClick={() => setExpandedTicketId(expandedTicketId === ticket.id ? null : ticket.id)}
-                                className="text-xs font-bold text-brand-blue mt-3 hover:underline flex items-center gap-1"
-                              >
-                                {expandedTicketId === ticket.id ? 'Hide Details' : 'View Details'}
-                              </button>
+         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-slide-up">
+            {/* Create Ticket */}
+            <div className="bg-white rounded-[12px] shadow-sm border border-gray-100 p-6">
+               <h3 className="font-display font-bold text-xl text-brand-blue mb-6">Contact Support</h3>
+               <form onSubmit={handleSubmitTicket} className="space-y-4">
+                  <div>
+                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Category</label>
+                     <select 
+                        value={ticketCategory} 
+                        onChange={(e) => setTicketCategory(e.target.value as TicketCategory)}
+                        className={inputClass}
+                     >
+                        <option value="FEES">Fees & Finance</option>
+                        <option value="ACADEMIC">Academics</option>
+                        <option value="TRANSPORT">Transport</option>
+                        <option value="DISCIPLINARY">Disciplinary</option>
+                        <option value="OTHER">Other Inquiry</option>
+                     </select>
+                  </div>
+                  
+                  <div>
+                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Related Student (Optional)</label>
+                     <select 
+                        value={ticketStudentId} 
+                        onChange={(e) => setTicketStudentId(e.target.value)}
+                        className={inputClass}
+                     >
+                        <option value="">-- General Inquiry --</option>
+                        {myChildren.map(child => (
+                           <option key={child.id} value={child.id}>{child.name}</option>
+                        ))}
+                     </select>
+                  </div>
 
-                              {expandedTicketId === ticket.id && ticket.adminResponse && (
-                                  <div className="mt-3 bg-brand-blue/5 p-3 rounded-lg border border-brand-blue/10 animate-fade-in">
-                                      <p className="text-[10px] font-bold text-brand-blue uppercase mb-1">Admin Response</p>
-                                      <p className="text-xs text-gray-700">{ticket.adminResponse}</p>
-                                  </div>
-                              )}
+                  <div>
+                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Subject</label>
+                     <input 
+                        type="text" 
+                        value={ticketSubject}
+                        onChange={(e) => setTicketSubject(e.target.value)}
+                        placeholder="Brief summary of your issue..."
+                        className={inputClass}
+                        required
+                     />
+                  </div>
+
+                  <div>
+                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Message</label>
+                     <textarea 
+                        value={ticketMessage}
+                        onChange={(e) => setTicketMessage(e.target.value)}
+                        placeholder="Describe your issue in detail..."
+                        className="w-full h-32 p-4 rounded-lg border border-gray-200 focus:border-brand-sky focus:ring-2 focus:ring-brand-sky/20 outline-none transition-all font-medium text-gray-700 bg-white resize-none"
+                        required
+                     />
+                  </div>
+
+                  <div className="pt-2">
+                     <button 
+                        type="submit" 
+                        disabled={isSubmittingTicket}
+                        className={`w-full h-12 bg-brand-blue text-white ${btnBase} shadow-lg shadow-brand-blue/20 hover:bg-brand-blue/90 flex items-center justify-center gap-2`}
+                     >
+                        {isSubmittingTicket ? <Loader2 className="animate-spin" size={20}/> : <><Send size={18}/> Submit Ticket</>}
+                     </button>
+                  </div>
+               </form>
+            </div>
+
+            {/* Ticket History & FAQ */}
+            <div className="space-y-6">
+               <div className="bg-white rounded-[12px] shadow-sm border border-gray-100 p-6 flex flex-col h-[400px]">
+                  <h3 className="font-display font-bold text-lg text-gray-800 mb-4">My Tickets</h3>
+                  <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3">
+                     {myTickets.length > 0 ? myTickets.map(ticket => (
+                        <div key={ticket.id} className="border border-gray-100 rounded-xl overflow-hidden bg-gray-50/50">
+                           <div 
+                              className="p-4 cursor-pointer hover:bg-gray-50 transition-colors flex justify-between items-start"
+                              onClick={() => setExpandedTicketId(expandedTicketId === ticket.id ? null : ticket.id)}
+                           >
+                              <div>
+                                 <div className="flex items-center gap-2 mb-1">
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                       ticket.status === 'OPEN' ? 'bg-brand-yellow/10 text-brand-yellow-600' : 'bg-brand-green/10 text-brand-green'
+                                    }`}>
+                                       {ticket.status}
+                                    </span>
+                                    <span className="text-[10px] text-gray-400">{format(new Date(ticket.date), 'dd MMM')}</span>
+                                 </div>
+                                 <h4 className="font-bold text-sm text-gray-800">{ticket.subject}</h4>
+                              </div>
+                              <div className="text-gray-400">
+                                 {expandedTicketId === ticket.id ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
+                              </div>
+                           </div>
+                           
+                           {expandedTicketId === ticket.id && (
+                              <div className="p-4 pt-0 border-t border-gray-100 bg-white">
+                                 <p className="text-sm text-gray-600 mb-3 mt-3">{ticket.message}</p>
+                                 {ticket.adminResponse && (
+                                    <div className="bg-brand-blue/5 p-3 rounded-lg border border-brand-blue/10">
+                                       <p className="text-xs font-bold text-brand-blue mb-1">Response from {ticket.resolvedBy}</p>
+                                       <p className="text-sm text-gray-700">{ticket.adminResponse}</p>
+                                    </div>
+                                 )}
+                              </div>
+                           )}
+                        </div>
+                     )) : (
+                        <p className="text-center text-gray-400 italic py-8">You haven't submitted any tickets yet.</p>
+                     )}
+                  </div>
+               </div>
+
+               <div className="bg-brand-grey/30 rounded-[12px] border border-gray-200 p-6">
+                  <h3 className="font-display font-bold text-lg text-gray-800 mb-4">Frequently Asked Questions</h3>
+                  <div className="space-y-4">
+                     {faqs.map((faq, i) => (
+                        <div key={i}>
+                           <h4 className="font-bold text-sm text-brand-blue mb-1">{faq.q}</h4>
+                           <p className="text-xs text-gray-600 leading-relaxed">{faq.a}</p>
+                        </div>
+                     ))}
+                  </div>
+               </div>
+            </div>
+         </div>
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentGateway && paymentContext && activeChild && (
+        <PaymentGatewayModal 
+           isOpen={showPaymentGateway}
+           onClose={() => setShowPaymentGateway(false)}
+           student={activeChild}
+           paymentContext={paymentContext}
+           userPhone={user?.phoneNumber}
+           onSuccess={() => {
+              showToast("Payment successful!");
+              // Context updates via webhook/polling in real app, here via optimistic update in Modal
+           }}
+        />
+      )}
+
+      {/* Achievements Modal */}
+      {showAchievementsModal && (
+          <div className="fixed inset-0 bg-brand-blue/20 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+              <div className="bg-white rounded-2xl p-8 w-full max-w-lg shadow-2xl relative animate-slide-up border border-gray-100 max-h-[80vh] flex flex-col">
+                  <button onClick={() => setShowAchievementsModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 rounded-full p-1"><X size={20}/></button>
+                  <h3 className="text-xl font-display font-bold mb-1 text-brand-blue flex items-center gap-2">
+                      <Star className="fill-brand-yellow text-brand-yellow"/> Achievement History
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-6">Track {activeChild.name}'s progress and rewards.</p>
+                  
+                  <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3">
+                      {activeChildPoints.length > 0 ? activeChildPoints.map(log => (
+                          <div key={log.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+                              <div>
+                                  <p className="text-sm font-bold text-gray-800">{log.reason}</p>
+                                  <p className="text-[10px] text-gray-400">{format(new Date(log.date), 'dd MMM yyyy')}</p>
+                              </div>
+                              <span className="text-lg font-bold text-brand-green">+{log.points}</span>
                           </div>
                       )) : (
-                          <div className="text-center py-12 text-gray-400 italic">
-                              No support tickets found.
-                          </div>
+                          <div className="text-center py-12 text-gray-400 italic">No achievements recorded yet.</div>
                       )}
                   </div>
               </div>
-
-              {/* New Ticket Form & FAQs */}
-              <div className="space-y-6">
-                  {/* Create Ticket */}
-                  <div className="bg-white rounded-[12px] shadow-sm border border-gray-100 p-6">
-                      <h3 className="font-display font-bold text-lg text-gray-800 mb-6">Create New Ticket</h3>
-                      <form onSubmit={handleSubmitTicket} className="space-y-4">
-                          <div>
-                              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Related Student</label>
-                              <select 
-                                value={ticketStudentId}
-                                onChange={(e) => setTicketStudentId(e.target.value)}
-                                className={inputClass}
-                              >
-                                  <option value="">General Query</option>
-                                  {myChildren.map(child => (
-                                      <option key={child.id} value={child.id}>{child.name}</option>
-                                  ))}
-                              </select>
-                          </div>
-                          <div>
-                              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Category</label>
-                              <select 
-                                value={ticketCategory}
-                                onChange={(e) => setTicketCategory(e.target.value as TicketCategory)}
-                                className={inputClass}
-                              >
-                                  <option value="FEES">Fees & Finance</option>
-                                  <option value="ACADEMIC">Academics</option>
-                                  <option value="TRANSPORT">Transport</option>
-                                  <option value="DISCIPLINARY">Disciplinary</option>
-                                  <option value="OTHER">Other</option>
-                              </select>
-                          </div>
-                          <div>
-                              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Subject</label>
-                              <input 
-                                type="text"
-                                value={ticketSubject}
-                                onChange={(e) => setTicketSubject(e.target.value)}
-                                className={inputClass}
-                                placeholder="Brief summary of issue"
-                                required
-                              />
-                          </div>
-                          <div>
-                              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Message</label>
-                              <textarea 
-                                value={ticketMessage}
-                                onChange={(e) => setTicketMessage(e.target.value)}
-                                className="w-full h-32 p-3 rounded-[12px] border border-gray-200 text-sm focus:border-brand-sky focus:ring-2 focus:ring-brand-sky/20 outline-none resize-none font-medium text-gray-700"
-                                placeholder="Describe your issue in detail..."
-                                required
-                              />
-                          </div>
-                          <button 
-                            type="submit" 
-                            disabled={isSubmittingTicket}
-                            className={`w-full h-12 bg-brand-blue text-white rounded-[12px] font-bold shadow-lg hover:bg-brand-blue/90 flex items-center justify-center gap-2 ${btnBase}`}
-                          >
-                              {isSubmittingTicket ? <Loader2 className="animate-spin" size={20}/> : <><Send size={18}/> Submit Ticket</>}
-                          </button>
-                      </form>
-                  </div>
-
-                  {/* Quick FAQs */}
-                  <div className="bg-brand-sky/5 rounded-[12px] border border-brand-sky/10 p-6">
-                      <h3 className="font-display font-bold text-lg text-brand-blue mb-4">Frequently Asked Questions</h3>
-                      <div className="space-y-4">
-                          {faqs.map((faq, idx) => (
-                              <div key={idx} className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
-                                  <p className="text-xs font-bold text-gray-800 mb-1">{faq.q}</p>
-                                  <p className="text-xs text-gray-500">{faq.a}</p>
-                              </div>
-                          ))}
-                      </div>
-                  </div>
-              </div>
           </div>
-      )}
-
-      {/* Payment Gateway Modal */}
-      {showPaymentGateway && paymentContext && (
-        <PaymentGatewayModal 
-            isOpen={showPaymentGateway}
-            onClose={() => setShowPaymentGateway(false)}
-            student={activeChild}
-            paymentContext={paymentContext}
-            onSuccess={() => {
-                showToast("Payment processed successfully!");
-                setShowPaymentGateway(false);
-            }}
-            userPhone={user?.phoneNumber}
-        />
       )}
 
     </div>
