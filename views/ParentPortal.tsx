@@ -1,8 +1,7 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useStudentData } from '../context/StudentDataContext';
 import { useAuth } from '../context/AuthContext';
-import { Wallet, Star, AlertCircle, Loader2, Calendar, BookOpen, Bell, ArrowRight, CheckCircle2, X, Check, Users, MapPin, FileText, Table, HelpCircle, Phone, Mail, ChevronDown, ChevronUp, MessageSquare, Send, Bus, Clock } from 'lucide-react';
+import { Wallet, Star, AlertCircle, Loader2, Calendar, BookOpen, Bell, ArrowRight, CheckCircle2, X, Check, Users, MapPin, FileText, Table, HelpCircle, Phone, Mail, ChevronDown, ChevronUp, MessageSquare, Send, Bus, Clock, Trophy } from 'lucide-react';
 import { db } from '../services/db';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
@@ -182,12 +181,6 @@ const ParentPortal: React.FC = () => {
   const presentDays = childAttendance.filter(a => a.status === 'PRESENT').length;
   const attendanceRate = Math.round((presentDays / totalDays) * 100);
 
-  // Mock Announcements/Homework
-  const notices = [
-    { id: 1, type: 'HOMEWORK', title: 'Mathematics: Fractions Worksheet', due: 'Tomorrow', subject: 'Mathematics' },
-    { id: 2, type: 'ALERT', title: 'School fees deadline approaching', due: 'Urgent', subject: 'Admin' },
-  ];
-
   const btnBase = "rounded-xl font-bold transition-all focus:outline-none focus:ring-4 focus:ring-brand-sky/30 disabled:opacity-50 active:scale-[0.98]";
   const inputClass = "w-full h-12 px-4 rounded-lg border border-gray-200 focus:border-brand-sky focus:ring-2 focus:ring-brand-sky/20 outline-none transition-all font-medium text-gray-700 bg-white hover:border-brand-sky/50 disabled:bg-gray-100 disabled:cursor-not-allowed";
 
@@ -243,410 +236,350 @@ const ParentPortal: React.FC = () => {
       {mode === 'DASHBOARD' && (
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 animate-slide-up">
             
-            {/* 1. FINANCE WIDGET (Prominent - Col Span 8) */}
-            <div className="md:col-span-8 bg-white rounded-[12px] shadow-sm border border-gray-100 p-6 md:p-8 relative overflow-hidden group hover:shadow-md transition-all">
-            {/* Decorative Background Blob */}
-            <div className="absolute -top-12 -right-12 w-48 h-48 bg-brand-yellow/10 rounded-full blur-3xl group-hover:bg-brand-yellow/20 transition-all"></div>
-
-            <div className="relative z-10 flex flex-col md:flex-row justify-between gap-8">
-                <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2 text-brand-blue/80">
-                    <Wallet size={18} />
-                    <span className="text-xs font-bold uppercase tracking-wider">Fee Status • Term 3</span>
-                    </div>
-                    
-                    <div className="mb-6">
-                    {activeChild.balance > 0 ? (
-                        <>
-                        <p className="text-5xl font-display font-extrabold text-gray-800 tracking-tight">
-                            <span className="text-xl text-gray-400 font-sans align-top mr-1">KES</span>
-                            {activeChild.balance.toLocaleString()}
-                        </p>
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-yellow/20 text-brand-yellow text-xs font-bold mt-2">
-                            <AlertCircle size={12}/> Outstanding Balance
+            {/* 1. STUDENT SCORE WIDGET */}
+            <div className="md:col-span-4 bg-gradient-to-br from-brand-blue to-blue-900 rounded-[12px] shadow-lg p-6 relative overflow-hidden text-white flex flex-col justify-between h-full min-h-[220px]">
+                <div className="absolute -top-4 -right-4 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                
+                <div className="relative z-10">
+                    <div className="flex justify-between items-start mb-4">
+                        <div>
+                            <p className="text-blue-200 text-xs font-bold uppercase tracking-wider mb-1">Total Points</p>
+                            <span className="text-4xl font-display font-extrabold">{activeChild.totalPoints || 0}</span>
                         </div>
-                        </>
-                    ) : (
-                        <>
-                        <p className="text-5xl font-display font-extrabold text-brand-green tracking-tight">Cleared</p>
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-green/20 text-brand-green text-xs font-bold mt-2">
-                            <CheckCircle2 size={12}/> Fees Fully Paid
+                        <div className="p-3 bg-white/10 rounded-full">
+                            <Trophy size={24} className="text-brand-yellow"/>
                         </div>
-                        </>
-                    )}
                     </div>
+                    <div className="w-full bg-black/20 h-2 rounded-full overflow-hidden mb-2">
+                        <div className="h-full bg-brand-yellow w-3/4"></div>
+                    </div>
+                    <p className="text-xs text-blue-100">Top 10% in class! Keep it up.</p>
+                </div>
+                
+                <button className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold text-white transition-colors flex items-center justify-center gap-2 mt-4">
+                    <Star size={14}/> View Achievements
+                </button>
+            </div>
 
-                    <div className="flex gap-3">
-                    {activeChild.balance > 0 && (
-                        <button 
-                        onClick={handlePayFees}
-                        className="px-8 h-12 bg-brand-blue text-white rounded-[12px] font-bold shadow-lg shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all flex items-center justify-center gap-2 focus:ring-4 focus:ring-brand-sky/30 active:scale-[0.98]"
-                        >
-                        Settle Now via MPesa
-                        </button>
-                    )}
+            {/* 2. FEES WIDGET */}
+            <div className="md:col-span-4 bg-white rounded-[12px] shadow-sm border border-gray-100 p-6 flex flex-col justify-between h-full min-h-[220px]">
+                <div>
+                    <div className="flex justify-between items-start mb-2">
+                        <div className="p-3 bg-brand-green/10 text-brand-green rounded-xl">
+                            <Wallet size={24}/>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${activeChild.balance > 0 ? 'bg-brand-red/10 text-brand-red' : 'bg-brand-green/10 text-brand-green'}`}>
+                            {activeChild.balance > 0 ? 'Balance Due' : 'Cleared'}
+                        </span>
+                    </div>
+                    <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mt-4 mb-1">Outstanding Fees</p>
+                    <p className="text-3xl font-display font-bold text-gray-800">KES {activeChild.balance.toLocaleString()}</p>
+                </div>
+                {activeChild.balance > 0 && (
                     <button 
-                        onClick={() => showToast("Financial history downloaded.")}
-                        className="px-6 h-12 bg-brand-grey text-gray-600 rounded-[12px] font-bold hover:bg-gray-200 transition-all focus:ring-2 focus:ring-brand-sky/30"
+                        onClick={handlePayFees}
+                        className="w-full py-3 bg-brand-blue text-white rounded-lg text-xs font-bold hover:bg-brand-blue/90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-blue/20"
                     >
-                        History
+                        Pay Now <ArrowRight size={14}/>
                     </button>
+                )}
+            </div>
+
+            {/* 3. ATTENDANCE WIDGET */}
+            <div className="md:col-span-4 bg-white rounded-[12px] shadow-sm border border-gray-100 p-6 flex flex-col justify-between h-full min-h-[220px]">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Attendance</p>
+                        <p className="text-3xl font-display font-bold text-gray-800">{attendanceRate}%</p>
+                        <p className="text-xs text-gray-500 mt-1">Present {presentDays} of {totalDays} days</p>
+                    </div>
+                    <div className="h-16 w-16">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={[{ value: attendanceRate, color: '#059669' }, { value: 100 - attendanceRate, color: '#F3F4F6' }]}
+                                    innerRadius={20}
+                                    outerRadius={30}
+                                    dataKey="value"
+                                    startAngle={90}
+                                    endAngle={-270}
+                                >
+                                    <Cell fill="#059669" />
+                                    <Cell fill="#F3F4F6" />
+                                </Pie>
+                            </PieChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
-
-                {/* Mini Transaction List */}
-                <div className="hidden md:block w-64 border-l border-gray-100 pl-8">
-                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-4">Recent Payments</h4>
-                    <div className="space-y-3">
-                    {childTransactions.slice(0, 3).map(t => (
-                        <div key={t.id} className="text-sm">
-                        <div className="flex justify-between font-bold text-gray-700">
-                            <span>{t.type}</span>
-                            <span className="text-brand-green">+{t.amount.toLocaleString()}</span>
-                        </div>
-                        <div className="text-xs text-gray-400">{t.date} via {t.method}</div>
-                        </div>
-                    ))}
-                    {childTransactions.length === 0 && <p className="text-xs text-gray-400 italic">No recent history.</p>}
+                <div className="mt-4 pt-4 border-t border-gray-50 flex flex-col gap-2">
+                    <div className="flex justify-between items-center text-xs text-gray-600">
+                        <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-brand-green"></div> Present</span>
+                        <span className="font-bold">{presentDays}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-gray-600">
+                        <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-brand-red"></div> Absent</span>
+                        <span className="font-bold">{totalDays - presentDays}</span>
                     </div>
                 </div>
             </div>
-            </div>
 
-            {/* 2. TRANSPORT INTELLIGENCE WIDGET (Col Span 4) */}
-            <div className="md:col-span-4 bg-white rounded-[12px] shadow-sm border border-gray-100 p-6 flex flex-col hover:shadow-md transition-all overflow-hidden relative">
-                <div className="flex justify-between items-center mb-4 relative z-10">
-                    <div className="flex items-center gap-2 text-brand-blue/80">
-                        <Bus size={18} />
-                        <span className="text-xs font-bold uppercase tracking-wider">My Child's Transport</span>
-                    </div>
+            {/* 4. UPCOMING EVENTS & CONSENT */}
+            <div className="md:col-span-8 bg-white rounded-[12px] shadow-sm border border-gray-100 p-6">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-display font-bold text-lg text-gray-800 flex items-center gap-2">
+                        <Calendar size={20} className="text-brand-blue"/> Upcoming Events
+                    </h3>
                 </div>
-
-                {activeRoute ? (
-                    <div className="relative z-10 flex-1 flex flex-col">
-                        <div className="mb-4">
-                            <h4 className="text-lg font-bold text-gray-800">{activeRoute.name}</h4>
-                            <p className="text-xs text-gray-500">Scheduled: {activeRoute.scheduleTime}</p>
-                        </div>
-
-                        {activeVehicle && activeVehicle.status !== 'IDLE' ? (
-                            <div className="bg-brand-blue/5 p-4 rounded-xl border border-brand-blue/10 mb-4 flex-1 flex flex-col justify-center">
-                                <div className="flex items-center justify-between mb-3">
-                                    <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${activeVehicle.status === 'DELAYED' ? 'bg-brand-red text-white' : 'bg-brand-green text-white'}`}>
-                                        {activeVehicle.status === 'ON_ROUTE' ? 'Arriving Soon' : 'Delayed'}
-                                    </span>
-                                    <span className="text-2xl font-bold text-brand-blue">{activeVehicle.etaToNextStop}</span>
+                <div className="space-y-4">
+                    {upcomingEvents.length > 0 ? upcomingEvents.map(event => {
+                        const hasConsent = checkConsentStatus(event.id);
+                        return (
+                            <div key={event.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 gap-4">
+                                <div className="flex items-start gap-4">
+                                    <div className="flex flex-col items-center justify-center bg-white p-2 rounded-lg border border-gray-200 w-16 h-16 shrink-0">
+                                        <span className="text-xs font-bold text-brand-red uppercase">{format(new Date(event.startDate), 'MMM')}</span>
+                                        <span className="text-xl font-display font-bold text-gray-800">{format(new Date(event.startDate), 'dd')}</span>
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-gray-800 text-sm mb-1">{event.title}</h4>
+                                        <p className="text-xs text-gray-500 line-clamp-1">{event.description || 'No details provided.'}</p>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            {event.requiresPayment && (
+                                                <span className="text-[10px] font-bold bg-brand-yellow/10 text-brand-yellow-700 px-2 py-0.5 rounded">
+                                                    Cost: KES {event.cost}
+                                                </span>
+                                            )}
+                                            {event.requiresConsent && (
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${hasConsent ? 'bg-brand-green/10 text-brand-green' : 'bg-brand-red/10 text-brand-red'}`}>
+                                                    {hasConsent ? 'Consent Signed' : 'Consent Needed'}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="text-xs text-gray-600 space-y-1">
-                                    <p className="flex items-center gap-2"><MapPin size={12}/> Next Stop: {activeVehicle.nextStop}</p>
-                                    <p className="flex items-center gap-2"><Users size={12}/> Driver: {activeRoute.driverName}</p>
-                                </div>
-                                {/* Simple Visual Progress */}
-                                <div className="mt-4 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                    <div className="h-full bg-brand-blue w-2/3 animate-pulse"></div>
+                                <div className="flex gap-2 self-end md:self-center">
+                                    {event.requiresConsent && !hasConsent && (
+                                        <button 
+                                            onClick={() => handleSignConsent(event.id)}
+                                            className="px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs font-bold hover:border-brand-green hover:text-brand-green transition-colors"
+                                        >
+                                            Sign Consent
+                                        </button>
+                                    )}
+                                    {event.requiresPayment && (
+                                        <button 
+                                            onClick={() => handlePayTrip(event)}
+                                            className="px-4 py-2 bg-brand-blue text-white rounded-lg text-xs font-bold hover:bg-brand-blue/90 shadow-lg shadow-brand-blue/20"
+                                        >
+                                            Pay Now
+                                        </button>
+                                    )}
                                 </div>
                             </div>
-                        ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center text-center py-6 bg-gray-50 rounded-xl border border-gray-100 border-dashed">
-                                <Clock size={32} className="text-gray-300 mb-2"/>
-                                <p className="text-sm font-bold text-gray-500">Bus is currently idle.</p>
-                                <p className="text-xs text-gray-400">Next trip starts tomorrow morning.</p>
+                        );
+                    }) : (
+                        <div className="text-center py-8 text-gray-400 text-sm italic">
+                            No upcoming events scheduled.
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* 5. TIMETABLE PREVIEW */}
+            <div className="md:col-span-4 bg-white rounded-[12px] shadow-sm border border-gray-100 p-6 flex flex-col">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-display font-bold text-lg text-gray-800 flex items-center gap-2">
+                        <Clock size={20} className="text-brand-blue"/> Today's Classes
+                    </h3>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                    <TimetableModule mode="PARENT" targetClass={activeChild.grade} />
+                </div>
+            </div>
+
+            {/* 6. TRANSPORT STATUS */}
+            {activeRoute && (
+                <div className="md:col-span-12 bg-white rounded-[12px] shadow-sm border border-gray-100 p-6">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-display font-bold text-lg text-gray-800 flex items-center gap-2">
+                            <Bus size={20} className="text-brand-yellow"/> Transport Status
+                        </h3>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${activeVehicle?.status === 'ON_ROUTE' ? 'bg-brand-green/10 text-brand-green' : 'bg-gray-100 text-gray-500'}`}>
+                            {activeVehicle?.status.replace('_', ' ') || 'OFFLINE'}
+                        </span>
+                    </div>
+                    <div className="flex flex-col md:flex-row gap-6 items-center">
+                        <div className="flex-1 space-y-2 w-full">
+                            <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
+                                <span className="text-xs text-gray-500">Route</span>
+                                <span className="text-xs font-bold text-gray-800">{activeRoute.name}</span>
+                            </div>
+                            <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
+                                <span className="text-xs text-gray-500">Driver</span>
+                                <span className="text-xs font-bold text-gray-800">{activeRoute.driverName}</span>
+                            </div>
+                            <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
+                                <span className="text-xs text-gray-500">Vehicle</span>
+                                <span className="text-xs font-bold text-gray-800">{activeRoute.vehicleNumber}</span>
+                            </div>
+                        </div>
+                        {activeVehicle && (
+                            <div className="flex-1 w-full bg-brand-blue/5 rounded-xl p-4 flex items-center justify-center gap-4 border border-brand-blue/10">
+                                <div className="text-center">
+                                    <p className="text-xs font-bold text-gray-400 uppercase mb-1">Next Stop</p>
+                                    <p className="text-lg font-bold text-brand-blue">{activeVehicle.nextStop}</p>
+                                </div>
+                                <div className="h-10 w-px bg-gray-200"></div>
+                                <div className="text-center">
+                                    <p className="text-xs font-bold text-gray-400 uppercase mb-1">ETA</p>
+                                    <p className="text-lg font-bold text-brand-green font-mono">{activeVehicle.etaToNextStop}</p>
+                                </div>
                             </div>
                         )}
                     </div>
-                ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center py-8 text-gray-400">
-                        <Bus size={32} className="mb-2 opacity-20"/>
-                        <p className="text-xs italic">No transport assigned.</p>
-                    </div>
-                )}
-            </div>
-
-            {/* 3. TIMETABLE WIDGET (Col Span 12) */}
-            <div className="md:col-span-12">
-                <div className="bg-white rounded-[12px] shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="p-6 border-b border-gray-100 flex items-center gap-2">
-                        <Table size={18} className="text-brand-blue"/>
-                        <span className="text-sm font-bold text-gray-800">Class Timetable: {activeChild.grade}</span>
-                    </div>
-                    <div className="p-4">
-                        <TimetableModule mode="PARENT" targetClass={activeChild.grade} />
-                    </div>
                 </div>
-            </div>
-
-            {/* 4. CBC ACADEMICS (Col Span 6) */}
-            <div className="md:col-span-6 bg-white rounded-[12px] shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all">
-            <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-2 text-brand-blue/80">
-                    <Star size={18} />
-                    <span className="text-xs font-bold uppercase tracking-wider">CBC Competencies</span>
-                </div>
-                <button onClick={() => showToast("Full report card opened.")} className="text-xs font-bold text-brand-sky hover:underline">View All Report</button>
-            </div>
-
-            <div className="space-y-4">
-                {childCompetencies.length > 0 ? childCompetencies.slice(0, 3).map(comp => (
-                    <div key={comp.id} className="p-4 border border-gray-50 bg-gray-50/50 rounded-[12px] flex justify-between items-center group hover:bg-white hover:border-brand-sky/20 hover:shadow-sm transition-all">
-                    <div>
-                        <h4 className="font-bold text-gray-800 text-sm">{comp.subject}</h4>
-                        <p className="text-xs text-gray-500 mt-1">{comp.strand}</p>
-                    </div>
-                    <div className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 ${
-                        comp.rating === 'Exceeding' ? 'bg-brand-green/10 text-brand-green' : 
-                        comp.rating === 'Meeting Expectation' ? 'bg-brand-sky/10 text-brand-sky' :
-                        'bg-brand-yellow/10 text-brand-yellow'
-                    }`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${
-                            comp.rating === 'Exceeding' ? 'bg-brand-green' : 
-                            comp.rating === 'Meeting Expectation' ? 'bg-brand-sky' :
-                            'bg-brand-yellow'
-                        }`}></div>
-                        {comp.rating}
-                    </div>
-                    </div>
-                )) : (
-                    <div className="text-center py-8 text-gray-400 text-sm bg-gray-50 rounded-[12px]">No competencies recorded yet.</div>
-                )}
-            </div>
-            </div>
-
-            {/* 5. COMMUNICATION & HOMEWORK (Col Span 6) */}
-            <div className="md:col-span-6 bg-white rounded-[12px] shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all">
-            <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-2 text-brand-blue/80">
-                    <Bell size={18} />
-                    <span className="text-xs font-bold uppercase tracking-wider">Notice Board</span>
-                </div>
-            </div>
-
-            <div className="space-y-3">
-                {notices.map(notice => (
-                    <div 
-                    key={notice.id} 
-                    onClick={() => showToast(`Opened: ${notice.title}`)}
-                    className="flex gap-4 p-4 rounded-[12px] hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100 cursor-pointer group"
-                    >
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        notice.type === 'HOMEWORK' ? 'bg-brand-blue/10 text-brand-blue' :
-                        notice.type === 'ALERT' ? 'bg-brand-red/10 text-brand-red' :
-                        'bg-brand-yellow/10 text-brand-yellow'
-                    }`}>
-                        {notice.type === 'HOMEWORK' && <BookOpen size={18}/>}
-                        {notice.type === 'EVENT' && <Calendar size={18}/>}
-                        {notice.type === 'ALERT' && <AlertCircle size={18}/>}
-                    </div>
-                    <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                            <h4 className="font-bold text-gray-800 text-sm group-hover:text-brand-blue transition-colors">{notice.title}</h4>
-                            <span className="text-[10px] font-bold text-brand-red px-2 py-0.5 bg-brand-red/5 rounded-full">{notice.due}</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">{notice.subject}</p>
-                    </div>
-                    <div className="flex items-center text-gray-300 group-hover:text-brand-blue transition-colors">
-                        <ArrowRight size={16} />
-                    </div>
-                    </div>
-                ))}
-            </div>
-            </div>
+            )}
 
         </div>
       )}
 
-      {/* ... (Support Mode & Modals same as before) ... */}
-      
-      {/* Re-rendering existing Modals for full functionality preservation */}
-      {/* ... (Copy of Support Mode & Payment Modal code) ... */}
       {/* === SUPPORT MODE === */}
       {mode === 'SUPPORT' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-up">
-            
-            {/* COL 1: CONTACT & FORM */}
-            <div className="space-y-6">
-                {/* Official Directory */}
-                <div className="bg-white rounded-[12px] border border-gray-100 p-6 shadow-sm">
-                    <h3 className="font-display font-bold text-lg text-gray-800 mb-4 flex items-center gap-2"><Phone size={20}/> Official Contacts</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-                            <p className="text-xs font-bold text-gray-400 uppercase mb-1">General Inquiries</p>
-                            <p className="font-bold text-gray-800">School Secretary</p>
-                            <a href="tel:0700123456" className="text-sm font-bold text-brand-sky hover:underline mt-1 block">+254 700 123 456</a>
-                            <a href="mailto:info@mwangaza.co.ke" className="text-xs text-gray-500 mt-1 block">info@mwangaza.co.ke</a>
-                        </div>
-                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-                            <p className="text-xs font-bold text-gray-400 uppercase mb-1">Finance & Accounts</p>
-                            <p className="font-bold text-gray-800">Bursar's Office</p>
-                            <a href="tel:0700123457" className="text-sm font-bold text-brand-sky hover:underline mt-1 block">+254 700 123 457</a>
-                            <a href="mailto:accounts@mwangaza.co.ke" className="text-xs text-gray-500 mt-1 block">accounts@mwangaza.co.ke</a>
-                        </div>
-                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-                            <p className="text-xs font-bold text-gray-400 uppercase mb-1">Transport</p>
-                            <p className="font-bold text-gray-800">Transport Manager</p>
-                            <a href="tel:0700123458" className="text-sm font-bold text-brand-sky hover:underline mt-1 block">+254 700 123 458</a>
-                        </div>
-                    </div>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up">
+              {/* Ticket History */}
+              <div className="bg-white rounded-[12px] shadow-sm border border-gray-100 p-6 flex flex-col h-[600px]">
+                  <h3 className="font-display font-bold text-lg text-gray-800 mb-6 flex items-center gap-2">
+                      <MessageSquare size={20} className="text-brand-blue"/> My Tickets
+                  </h3>
+                  <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4">
+                      {myTickets.length > 0 ? myTickets.map(ticket => (
+                          <div key={ticket.id} className="border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors">
+                              <div className="flex justify-between items-start mb-2">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${ticket.status === 'OPEN' ? 'bg-brand-yellow/10 text-brand-yellow-700' : 'bg-brand-green/10 text-brand-green'}`}>
+                                      {ticket.status}
+                                  </span>
+                                  <span className="text-[10px] text-gray-400">{format(new Date(ticket.date), 'dd MMM yyyy')}</span>
+                              </div>
+                              <h4 className="font-bold text-sm text-gray-800 mb-1">{ticket.subject}</h4>
+                              <p className="text-xs text-gray-500 line-clamp-2">{ticket.message}</p>
+                              
+                              <button 
+                                onClick={() => setExpandedTicketId(expandedTicketId === ticket.id ? null : ticket.id)}
+                                className="text-xs font-bold text-brand-blue mt-3 hover:underline flex items-center gap-1"
+                              >
+                                {expandedTicketId === ticket.id ? 'Hide Details' : 'View Details'}
+                              </button>
 
-                {/* Submit Ticket Form */}
-                <div className="bg-white rounded-[12px] border border-gray-100 p-6 shadow-sm">
-                    <h3 className="font-display font-bold text-lg text-gray-800 mb-1 flex items-center gap-2"><MessageSquare size={20}/> Submit a Query</h3>
-                    <p className="text-xs text-gray-500 mb-6">Create a support ticket and track its progress.</p>
-                    
-                    <form onSubmit={handleSubmitTicket} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Category</label>
-                                <select 
-                                    value={ticketCategory}
-                                    onChange={(e) => setTicketCategory(e.target.value as any)}
-                                    className={inputClass}
-                                >
-                                    <option value="FEES">Fees & Finance</option>
-                                    <option value="ACADEMIC">Academics</option>
-                                    <option value="TRANSPORT">Transport</option>
-                                    <option value="DISCIPLINARY">Disciplinary</option>
-                                    <option value="OTHER">Other</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Related Child</label>
-                                <select 
-                                    value={ticketStudentId}
-                                    onChange={(e) => setTicketStudentId(e.target.value)}
-                                    className={inputClass}
-                                >
-                                    <option value="">-- General / None --</option>
-                                    {myChildren.map(child => (
-                                        <option key={child.id} value={child.id}>{child.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Subject</label>
-                            <input 
+                              {expandedTicketId === ticket.id && ticket.adminResponse && (
+                                  <div className="mt-3 bg-brand-blue/5 p-3 rounded-lg border border-brand-blue/10 animate-fade-in">
+                                      <p className="text-[10px] font-bold text-brand-blue uppercase mb-1">Admin Response</p>
+                                      <p className="text-xs text-gray-700">{ticket.adminResponse}</p>
+                                  </div>
+                              )}
+                          </div>
+                      )) : (
+                          <div className="text-center py-12 text-gray-400 italic">
+                              No support tickets found.
+                          </div>
+                      )}
+                  </div>
+              </div>
+
+              {/* New Ticket Form & FAQs */}
+              <div className="space-y-6">
+                  {/* Create Ticket */}
+                  <div className="bg-white rounded-[12px] shadow-sm border border-gray-100 p-6">
+                      <h3 className="font-display font-bold text-lg text-gray-800 mb-6">Create New Ticket</h3>
+                      <form onSubmit={handleSubmitTicket} className="space-y-4">
+                          <div>
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Related Student</label>
+                              <select 
+                                value={ticketStudentId}
+                                onChange={(e) => setTicketStudentId(e.target.value)}
+                                className={inputClass}
+                              >
+                                  <option value="">General Query</option>
+                                  {myChildren.map(child => (
+                                      <option key={child.id} value={child.id}>{child.name}</option>
+                                  ))}
+                              </select>
+                          </div>
+                          <div>
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Category</label>
+                              <select 
+                                value={ticketCategory}
+                                onChange={(e) => setTicketCategory(e.target.value as TicketCategory)}
+                                className={inputClass}
+                              >
+                                  <option value="FEES">Fees & Finance</option>
+                                  <option value="ACADEMIC">Academics</option>
+                                  <option value="TRANSPORT">Transport</option>
+                                  <option value="DISCIPLINARY">Disciplinary</option>
+                                  <option value="OTHER">Other</option>
+                              </select>
+                          </div>
+                          <div>
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Subject</label>
+                              <input 
                                 type="text"
                                 value={ticketSubject}
                                 onChange={(e) => setTicketSubject(e.target.value)}
-                                required
                                 className={inputClass}
                                 placeholder="Brief summary of issue"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Message</label>
-                            <textarea 
+                                required
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Message</label>
+                              <textarea 
                                 value={ticketMessage}
                                 onChange={(e) => setTicketMessage(e.target.value)}
+                                className="w-full h-32 p-3 rounded-[12px] border border-gray-200 text-sm focus:border-brand-sky focus:ring-2 focus:ring-brand-sky/20 outline-none resize-none font-medium text-gray-700"
+                                placeholder="Describe your issue in detail..."
                                 required
-                                className="w-full p-4 rounded-lg border border-gray-200 focus:border-brand-sky focus:ring-2 focus:ring-brand-sky/20 outline-none transition-all font-medium text-gray-700 bg-white min-h-[120px]"
-                                placeholder="Describe your inquiry in detail..."
-                            ></textarea>
-                        </div>
-                        <div className="pt-2">
-                            <button 
-                                type="submit"
-                                disabled={isSubmittingTicket}
-                                className={`w-full h-12 bg-brand-blue text-white ${btnBase} shadow-lg shadow-brand-blue/20 hover:bg-brand-blue/90 flex items-center justify-center gap-2`}
-                            >
-                                {isSubmittingTicket ? <Loader2 className="animate-spin" size={20}/> : <><Send size={18}/> Submit Ticket</>}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+                              />
+                          </div>
+                          <button 
+                            type="submit" 
+                            disabled={isSubmittingTicket}
+                            className={`w-full h-12 bg-brand-blue text-white rounded-[12px] font-bold shadow-lg hover:bg-brand-blue/90 flex items-center justify-center gap-2 ${btnBase}`}
+                          >
+                              {isSubmittingTicket ? <Loader2 className="animate-spin" size={20}/> : <><Send size={18}/> Submit Ticket</>}
+                          </button>
+                      </form>
+                  </div>
 
-            {/* COL 2: HISTORY & FAQs */}
-            <div className="space-y-6">
-                {/* Ticket History */}
-                <div className="bg-white rounded-[12px] border border-gray-100 p-6 shadow-sm">
-                    <h3 className="font-display font-bold text-lg text-gray-800 mb-4">My Recent Queries</h3>
-                    <div className="space-y-3">
-                        {myTickets.length > 0 ? myTickets.map(ticket => (
-                            <div key={ticket.id} className="border border-gray-100 rounded-lg overflow-hidden transition-all hover:shadow-sm">
-                                <div 
-                                    onClick={() => setExpandedTicketId(expandedTicketId === ticket.id ? null : ticket.id)}
-                                    className="p-4 bg-gray-50 flex items-center justify-between cursor-pointer"
-                                >
-                                    <div>
-                                        <p className="text-sm font-bold text-gray-800">{ticket.subject}</p>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-[10px] text-gray-500">{format(new Date(ticket.date), 'dd MMM yyyy')}</span>
-                                            <span className="text-[10px] bg-white border border-gray-200 px-1.5 rounded text-gray-500 font-bold uppercase">{ticket.category}</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
-                                            ticket.status === 'RESOLVED' ? 'bg-brand-green/10 text-brand-green' : 'bg-brand-yellow/10 text-brand-yellow'
-                                        }`}>
-                                            {ticket.status}
-                                        </span>
-                                        {expandedTicketId === ticket.id ? <ChevronUp size={16} className="text-gray-400"/> : <ChevronDown size={16} className="text-gray-400"/>}
-                                    </div>
-                                </div>
-                                
-                                {expandedTicketId === ticket.id && (
-                                    <div className="p-4 bg-white border-t border-gray-100 text-sm animate-fade-in">
-                                        <p className="text-gray-600 mb-3">{ticket.message}</p>
-                                        
-                                        {ticket.adminResponse ? (
-                                            <div className="bg-brand-green/5 border border-brand-green/10 rounded-lg p-3">
-                                                <p className="text-xs font-bold text-brand-green uppercase mb-1 flex items-center gap-1">
-                                                    <Check size={12}/> Response from {ticket.resolvedBy || 'Admin'}
-                                                </p>
-                                                <p className="text-gray-800">{ticket.adminResponse}</p>
-                                                <p className="text-[10px] text-gray-400 mt-2 text-right">Resolved: {ticket.resolvedAt && format(new Date(ticket.resolvedAt), 'dd MMM, HH:mm')}</p>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2 text-gray-400 text-xs italic bg-gray-50 p-2 rounded">
-                                                <Loader2 size={12} className="animate-spin"/> Awaiting response from administration.
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )) : (
-                            <p className="text-center py-8 text-gray-400 text-sm italic">No past queries found.</p>
-                        )}
-                    </div>
-                </div>
-
-                {/* FAQ Accordion */}
-                <div className="bg-white rounded-[12px] border border-gray-100 p-6 shadow-sm">
-                    <h3 className="font-display font-bold text-lg text-gray-800 mb-4 flex items-center gap-2"><HelpCircle size={20}/> Frequently Asked Questions</h3>
-                    <div className="space-y-2">
-                        {faqs.map((faq, idx) => (
-                            <details key={idx} className="group border border-gray-100 rounded-lg bg-gray-50/50 open:bg-white open:shadow-sm transition-all">
-                                <summary className="flex justify-between items-center p-4 cursor-pointer font-bold text-sm text-gray-700 hover:text-brand-blue list-none">
-                                    <span>{faq.q}</span>
-                                    <ChevronDown size={16} className="text-gray-400 group-open:rotate-180 transition-transform"/>
-                                </summary>
-                                <div className="px-4 pb-4 text-sm text-gray-600 leading-relaxed border-t border-gray-100 pt-3">
-                                    {faq.a}
-                                </div>
-                            </details>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        </div>
+                  {/* Quick FAQs */}
+                  <div className="bg-brand-sky/5 rounded-[12px] border border-brand-sky/10 p-6">
+                      <h3 className="font-display font-bold text-lg text-brand-blue mb-4">Frequently Asked Questions</h3>
+                      <div className="space-y-4">
+                          {faqs.map((faq, idx) => (
+                              <div key={idx} className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+                                  <p className="text-xs font-bold text-gray-800 mb-1">{faq.q}</p>
+                                  <p className="text-xs text-gray-500">{faq.a}</p>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              </div>
+          </div>
       )}
 
-      {/* CENTRAL PAYMENT GATEWAY MODAL */}
-      {showPaymentGateway && paymentContext && activeChild && (
-        <PaymentGatewayModal
-          isOpen={showPaymentGateway}
-          onClose={() => setShowPaymentGateway(false)}
-          student={activeChild}
-          paymentContext={paymentContext}
-          userPhone={user?.phoneNumber}
-          onSuccess={() => {
-             // Optional: Refresh data or show specific success toast
-             showToast("Payment recorded successfully!");
-          }}
+      {/* Payment Gateway Modal */}
+      {showPaymentGateway && paymentContext && (
+        <PaymentGatewayModal 
+            isOpen={showPaymentGateway}
+            onClose={() => setShowPaymentGateway(false)}
+            student={activeChild}
+            paymentContext={paymentContext}
+            onSuccess={() => {
+                showToast("Payment processed successfully!");
+                setShowPaymentGateway(false);
+            }}
+            userPhone={user?.phoneNumber}
         />
       )}
+
     </div>
   );
 };

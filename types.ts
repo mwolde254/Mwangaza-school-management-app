@@ -22,6 +22,7 @@ export interface UserProfile {
   phoneNumber?: string;
   linkedStudentIds?: string[]; // For parents
   leaveBalances?: LeaveBalance; // New for staff
+  totalPoints?: number; // Gamification Score
 }
 
 // --- HR & STAFF TYPES ---
@@ -68,6 +69,7 @@ export interface Student {
   balance: number;
   avatarUrl: string;
   transportRouteId?: string; // Linked transport route
+  totalPoints: number; // Gamification Score
 }
 
 export interface StudentNote {
@@ -288,4 +290,15 @@ export interface TransportLog {
   arrivalTime: string;
   status: 'ON_TIME' | 'LATE';
   delayMinutes?: number;
+}
+
+// --- GAMIFICATION / REWARDS TYPES ---
+export interface PointLog {
+  id: string;
+  userId: string; // Student ID or Teacher User ID
+  role: 'STUDENT' | 'TEACHER';
+  points: number;
+  reason: string;
+  date: string;
+  awardedBy: string; // User ID
 }

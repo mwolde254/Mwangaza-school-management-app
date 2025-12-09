@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Student, AttendanceRecord, FinanceTransaction, LeaveRequest, Competency, Assessment, StudentNote, UserProfile, SchoolEvent, EventConsent, TimetableSlot, SupportTicket, AdmissionApplication, AdmissionStage, SmsTemplate, TransportRoute, TransportVehicle, TransportLog, StaffRecord, SystemConfig, SystemHealth } from '../types';
+import { Student, AttendanceRecord, FinanceTransaction, LeaveRequest, Competency, Assessment, StudentNote, UserProfile, SchoolEvent, EventConsent, TimetableSlot, SupportTicket, AdmissionApplication, AdmissionStage, SmsTemplate, TransportRoute, TransportVehicle, TransportLog, StaffRecord, SystemConfig, SystemHealth, PointLog } from '../types';
 import { db, AppNotification, OfflineDB, SyncItem } from '../services/db';
 
 interface DataContextType {
@@ -24,6 +24,7 @@ interface DataContextType {
   transportVehicles: TransportVehicle[];
   transportLogs: TransportLog[];
   staffRecords: StaffRecord[];
+  pointsLogs: PointLog[];
   systemConfig: SystemConfig | null;
   systemHealth: SystemHealth | null;
   
@@ -61,6 +62,7 @@ interface DataContextType {
   addTransportRoute: (route: Omit<TransportRoute, 'id'>) => Promise<void>;
   addStaffRecord: (staff: Omit<StaffRecord, 'id'>) => Promise<void>;
   updateStaffRecord: (id: string, updates: Partial<StaffRecord>) => Promise<void>;
+  awardPoints: (targetId: string, role: 'STUDENT' | 'TEACHER', points: number, reason: string, awardedBy: string) => Promise<void>;
   refresh: () => void;
 }
 
@@ -87,6 +89,7 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [transportVehicles, setTransportVehicles] = useState<TransportVehicle[]>([]);
   const [transportLogs, setTransportLogs] = useState<TransportLog[]>([]);
   const [staffRecords, setStaffRecords] = useState<StaffRecord[]>([]);
+  const [pointsLogs, setPointsLogs] = useState<PointLog[]>([]);
   const [systemConfig, setSystemConfig] = useState<SystemConfig | null>(null);
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   
@@ -223,7 +226,8 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
       db.onSnapshot('transport_logs', setTransportLogs),
       db.onSnapshot('staff', setStaffRecords),
       db.onSnapshot('attendance', setAttendance),
-      db.onSnapshot('competencies', setCompetencies)
+      db.onSnapshot('competencies', setCompetencies),
+      db.onSnapshot('points', setPointsLogs)
     ];
     
     // Transport Sim
@@ -401,7 +405,8 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
         contactPhone: app.parentPhone,
         contactEmail: app.parentEmail,
         balance: 30000,
-        avatarUrl: `https://ui-avatars.com/api/?name=${app.childName}&background=random`
+        avatarUrl: `https://ui-avatars.com/api/?name=${app.childName}&background=random`,
+        totalPoints: 0
     });
 
     await updateApplicationStage(applicationId, 'ENROLLED');
@@ -431,15 +436,42 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
     await performWrite('staff', 'UPDATE', updates, id);
   };
 
+  const awardPoints = async (targetId: string, role: 'STUDENT' | 'TEACHER', points: number, reason: string, awardedBy: string) => {
+    // 1. Create Log
+    await performWrite('points', 'CREATE', {
+        userId: targetId,
+        role,
+        points,
+        reason,
+        date: new Date().toISOString(),
+        awardedBy
+    });
+
+    // 2. Optimistic Update of Total
+    if (role === 'STUDENT') {
+        const student = students.find(s => s.id === targetId);
+        if (student) {
+            const newTotal = (student.totalPoints || 0) + points;
+            await performWrite('students', 'UPDATE', { totalPoints: newTotal }, targetId);
+        }
+    } else {
+        const user = users.find(u => u.id === targetId);
+        if (user) {
+            const newTotal = (user.totalPoints || 0) + points;
+            await performWrite('users', 'UPDATE', { totalPoints: newTotal }, targetId);
+        }
+    }
+  };
+
   const connectionState = isSyncing ? 'SYNCING' : (isOnline ? 'ONLINE' : 'OFFLINE');
 
   return (
     <StudentDataContext.Provider value={{ 
-      students, transactions, leaveRequests, attendance, competencies, assessments, notifications, studentNotes, users, events, consents, timetable, supportTickets, applications, smsTemplates, transportRoutes, transportVehicles, transportLogs, staffRecords, systemConfig, systemHealth,
+      students, transactions, leaveRequests, attendance, competencies, assessments, notifications, studentNotes, users, events, consents, timetable, supportTickets, applications, smsTemplates, transportRoutes, transportVehicles, transportLogs, staffRecords, pointsLogs, systemConfig, systemHealth,
       loading, 
       connectionStatus: connectionState,
       pendingChanges,
-      addStudent, addTransaction, updateLeaveRequest, submitAttendance, addAssessment, updateAssessment, addStudentNote, markNotificationRead, updateUser, addEvent, deleteEvent, submitConsent, submitLeaveRequest, resolveLeaveRequest, addTimetableSlot, deleteTimetableSlot, checkTimetableConflict, addSupportTicket, resolveSupportTicket, submitApplication, updateApplicationStage, enrollApplicant, addSmsTemplate, updateSmsTemplate, deleteSmsTemplate, addTransportRoute, addStaffRecord, updateStaffRecord,
+      addStudent, addTransaction, updateLeaveRequest, submitAttendance, addAssessment, updateAssessment, addStudentNote, markNotificationRead, updateUser, addEvent, deleteEvent, submitConsent, submitLeaveRequest, resolveLeaveRequest, addTimetableSlot, deleteTimetableSlot, checkTimetableConflict, addSupportTicket, resolveSupportTicket, submitApplication, updateApplicationStage, enrollApplicant, addSmsTemplate, updateSmsTemplate, deleteSmsTemplate, addTransportRoute, addStaffRecord, updateStaffRecord, awardPoints,
       refresh: fetchData
     }}>
       {children}

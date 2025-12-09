@@ -4,7 +4,7 @@ import { useStudentData } from '../context/StudentDataContext';
 import { useAuth } from '../context/AuthContext';
 import { FinanceTransaction, LeaveRequest, UserRole, SchoolEvent, EventType, EventAudience, LeaveType, AdmissionStage, SmsTemplate, StaffRecord, StaffRole, EmploymentStatus } from '../types';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from 'recharts';
-import { Check, X, CreditCard, MessageSquare, Plus, Filter, Wallet, Search, UserPlus, Users, Activity, FileText, AlertTriangle, ArrowRight, LayoutDashboard, Loader2, Trash2, Save, Send, AlertCircle, Smartphone, Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Briefcase, Stethoscope, Palmtree, Heart, Table, HelpCircle, GraduationCap, GripVertical, FileCheck, Mail, User, CheckCircle2, Bus, Map, Navigation, Fuel, Shield, Database, Server, Link, Edit3, UploadCloud, ChevronDown, History } from 'lucide-react';
+import { Check, X, CreditCard, MessageSquare, Plus, Filter, Wallet, Search, UserPlus, Users, Activity, FileText, AlertTriangle, ArrowRight, LayoutDashboard, Loader2, Trash2, Save, Send, AlertCircle, Smartphone, Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Briefcase, Stethoscope, Palmtree, Heart, Table, HelpCircle, GraduationCap, GripVertical, FileCheck, Mail, User, CheckCircle2, Bus, Map, Navigation, Fuel, Shield, Database, Server, Link, Edit3, UploadCloud, ChevronDown, History, Trophy, Star, Award } from 'lucide-react';
 import { db } from '../services/db';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, formatDistanceToNow, startOfWeek, endOfWeek } from 'date-fns';
 import TimetableModule from '../components/TimetableModule';
@@ -14,9 +14,9 @@ import UserManagement from '../components/UserManagement';
 const COLORS = ['#1E3A8A', '#059669', '#FCD34D', '#38BDF8'];
 
 const AdminPortal: React.FC = () => {
-  const { students, transactions, leaveRequests, resolveLeaveRequest, addTransaction, addEvent, deleteEvent, events, supportTickets, resolveSupportTicket, applications, updateApplicationStage, enrollApplicant, smsTemplates, transportRoutes, transportVehicles, transportLogs, addTransportRoute, staffRecords, addStaffRecord, updateStaffRecord, systemConfig, systemHealth } = useStudentData();
+  const { students, transactions, leaveRequests, resolveLeaveRequest, addTransaction, addEvent, deleteEvent, events, supportTickets, resolveSupportTicket, applications, updateApplicationStage, enrollApplicant, smsTemplates, transportRoutes, transportVehicles, transportLogs, addTransportRoute, staffRecords, addStaffRecord, updateStaffRecord, systemConfig, systemHealth, users, awardPoints } = useStudentData();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'FINANCE' | 'SMS' | 'ALERTS' | 'USERS' | 'CALENDAR' | 'HR' | 'TIMETABLE' | 'HELPDESK' | 'ADMISSIONS' | 'TRANSPORT'>('DASHBOARD');
+  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'FINANCE' | 'SMS' | 'ALERTS' | 'USERS' | 'CALENDAR' | 'HR' | 'TIMETABLE' | 'HELPDESK' | 'ADMISSIONS' | 'TRANSPORT' | 'REWARDS'>('DASHBOARD');
 
   // -- GLOBAL METRICS --
   const totalStudents = students.length;
@@ -129,6 +129,18 @@ const AdminPortal: React.FC = () => {
   const [rejectModalId, setRejectModalId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [showCalendarConfirm, setShowCalendarConfirm] = useState<string | null>(null); // Stores leave ID to approve
+
+  // -- REWARDS STATE --
+  const [showAwardModal, setShowAwardModal] = useState(false);
+  const [awardTargetId, setAwardTargetId] = useState('');
+  const [awardPointsVal, setAwardPointsVal] = useState(50);
+  const [awardReason, setAwardReason] = useState('');
+
+  const teacherLeaderboard = useMemo(() => {
+      return users
+        .filter(u => u.role === UserRole.TEACHER)
+        .sort((a,b) => (b.totalPoints || 0) - (a.totalPoints || 0));
+  }, [users]);
 
   // SMS Derived Calculations
   const uniqueGrades = Array.from(new Set(students.map(s => s.grade))).sort();
@@ -255,6 +267,25 @@ const AdminPortal: React.FC = () => {
           ...prev,
           qualifications: prev.qualifications?.filter((_, i) => i !== idx)
       }));
+  };
+
+  // -- REWARDS LOGIC --
+  const handleAwardTeacher = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!awardTargetId || !awardPointsVal) return;
+      await awardPoints(awardTargetId, 'TEACHER', awardPointsVal, awardReason, user?.id || 'ADMIN');
+      setShowAwardModal(false);
+      setAwardReason(''); setAwardTargetId('');
+      setSmsNotification({ message: 'Points awarded successfully!', type: 'success' });
+      setTimeout(() => setSmsNotification(null), 3000);
+  };
+
+  const handleAwardTeacherOfTheMonth = () => {
+      if (teacherLeaderboard.length > 0) {
+          const winner = teacherLeaderboard[0];
+          setSmsNotification({ message: `Announcement sent: ${winner.name} is Teacher of the Month!`, type: 'success' });
+          setTimeout(() => setSmsNotification(null), 4000);
+      }
   };
 
   // -- HELP DESK LOGIC --
@@ -478,6 +509,7 @@ const AdminPortal: React.FC = () => {
              activeTab === 'HELPDESK' ? 'Parent Help Desk' :
              activeTab === 'ADMISSIONS' ? 'Admissions Pipeline' :
              activeTab === 'TRANSPORT' ? 'Transport Intelligence' :
+             activeTab === 'REWARDS' ? 'Staff Recognition' :
              activeTab === 'HR' ? 'HR & System Records' : 'User Management'}
           </h1>
           <p className="text-gray-500 text-sm">
@@ -485,7 +517,7 @@ const AdminPortal: React.FC = () => {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {['DASHBOARD', 'FINANCE', 'TIMETABLE', 'ADMISSIONS', 'SMS', 'HELPDESK', 'TRANSPORT', 'CALENDAR', 'HR', 'USERS', 'ALERTS'].map(tab => (
+          {['DASHBOARD', 'FINANCE', 'TIMETABLE', 'ADMISSIONS', 'SMS', 'HELPDESK', 'TRANSPORT', 'REWARDS', 'CALENDAR', 'HR', 'USERS', 'ALERTS'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
@@ -502,6 +534,7 @@ const AdminPortal: React.FC = () => {
               {tab === 'ADMISSIONS' && <GraduationCap size={16}/>}
               {tab === 'TRANSPORT' && <Bus size={16}/>}
               {tab === 'ALERTS' && <AlertTriangle size={16}/>}
+              {tab === 'REWARDS' && <Trophy size={16}/>}
               <span className="capitalize">{tab === 'HR' ? 'HR & Staff' : tab === 'SMS' ? 'SMS' : tab === 'HELPDESK' ? 'Help Desk' : tab === 'TRANSPORT' ? 'Transport' : tab.toLowerCase()}</span>
             </button>
           ))}
@@ -581,6 +614,102 @@ const AdminPortal: React.FC = () => {
               </div>
            </div>
         </div>
+      )}
+
+      {/* --- REWARDS VIEW --- */}
+      {activeTab === 'REWARDS' && (
+          <div className="space-y-6 animate-slide-up">
+              {/* Leaderboard Header */}
+              <div className="flex flex-col md:flex-row gap-6">
+                  {/* Top Performer Spotlight */}
+                  <div className="md:w-1/3 bg-gradient-to-br from-brand-blue to-blue-900 rounded-xl p-6 text-white relative overflow-hidden shadow-lg">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-brand-yellow rounded-full blur-3xl opacity-20 transform translate-x-10 -translate-y-10"></div>
+                      <div className="relative z-10 flex flex-col items-center text-center">
+                          <Trophy size={48} className="text-brand-yellow mb-4" />
+                          <h3 className="text-brand-yellow text-sm font-bold uppercase tracking-widest mb-1">Leading This Month</h3>
+                          <p className="text-2xl font-display font-bold mb-6">{teacherLeaderboard[0]?.name || 'N/A'}</p>
+                          <div className="bg-white/10 rounded-full px-6 py-2 mb-6">
+                              <span className="text-3xl font-bold font-display">{teacherLeaderboard[0]?.totalPoints || 0}</span> <span className="text-xs uppercase text-blue-200">Points</span>
+                          </div>
+                          <button 
+                            onClick={handleAwardTeacherOfTheMonth}
+                            className="w-full py-3 bg-brand-yellow text-brand-blue font-bold rounded-lg hover:bg-yellow-400 transition-colors shadow-lg flex items-center justify-center gap-2"
+                          >
+                              <Award size={18}/> Award Teacher of Month
+                          </button>
+                      </div>
+                  </div>
+
+                  {/* Top 3 List */}
+                  <div className="flex-1 bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+                      <div className="flex justify-between items-center mb-6">
+                          <h3 className="font-display font-bold text-lg text-gray-800">Top Performers</h3>
+                          <button onClick={() => setShowAwardModal(true)} className="text-xs font-bold text-brand-blue hover:underline flex items-center gap-1">
+                              <Plus size={14}/> Manual Award
+                          </button>
+                      </div>
+                      <div className="space-y-4">
+                          {teacherLeaderboard.slice(0, 3).map((teacher, idx) => (
+                              <div key={teacher.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${idx === 0 ? 'bg-brand-yellow text-brand-blue' : idx === 1 ? 'bg-gray-300 text-gray-700' : 'bg-orange-200 text-orange-800'}`}>
+                                      {idx + 1}
+                                  </div>
+                                  <img src={teacher.avatarUrl} alt="" className="w-10 h-10 rounded-full border border-white shadow-sm" />
+                                  <div className="flex-1">
+                                      <p className="font-bold text-gray-800 text-sm">{teacher.name}</p>
+                                      <p className="text-xs text-gray-500">Teacher</p>
+                                  </div>
+                                  <div className="text-right">
+                                      <span className="block font-bold text-brand-green text-lg">{teacher.totalPoints || 0}</span>
+                                      <span className="text-[10px] text-gray-400 uppercase">Points</span>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              </div>
+
+              {/* Full Leaderboard Table */}
+              <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="p-4 border-b border-gray-100 bg-gray-50">
+                      <h3 className="font-display font-bold text-gray-800">Staff Performance Ranking</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                          <thead className="text-gray-500 font-bold text-xs uppercase border-b border-gray-100 bg-white">
+                              <tr>
+                                  <th className="px-6 py-4">Rank</th>
+                                  <th className="px-6 py-4">Teacher</th>
+                                  <th className="px-6 py-4 text-center">Score</th>
+                                  <th className="px-6 py-4 text-right">Actions</th>
+                              </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-50">
+                              {teacherLeaderboard.map((teacher, idx) => (
+                                  <tr key={teacher.id} className="hover:bg-gray-50 transition-colors">
+                                      <td className="px-6 py-4 font-mono text-gray-500">#{idx + 1}</td>
+                                      <td className="px-6 py-4 font-bold text-gray-800 flex items-center gap-3">
+                                          <img src={teacher.avatarUrl} className="w-8 h-8 rounded-full" alt=""/>
+                                          {teacher.name}
+                                      </td>
+                                      <td className="px-6 py-4 text-center">
+                                          <span className="bg-brand-green/10 text-brand-green px-3 py-1 rounded-full font-bold">{teacher.totalPoints || 0}</span>
+                                      </td>
+                                      <td className="px-6 py-4 text-right">
+                                          <button 
+                                            onClick={() => { setAwardTargetId(teacher.id); setShowAwardModal(true); }}
+                                            className="text-xs font-bold text-brand-blue hover:bg-brand-blue/10 px-3 py-1.5 rounded transition-colors"
+                                          >
+                                              Award Points
+                                          </button>
+                                      </td>
+                                  </tr>
+                              ))}
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+          </div>
       )}
 
       {/* --- USERS VIEW --- */}
@@ -1989,6 +2118,44 @@ const AdminPortal: React.FC = () => {
               </form>
            </div>
         </div>
+      )}
+
+      {/* AWARD POINTS MODAL */}
+      {showAwardModal && (
+          <div className="fixed inset-0 bg-brand-blue/20 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+              <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl relative animate-slide-up border border-gray-100">
+                  <button onClick={() => setShowAwardModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 rounded-full p-1"><X size={20}/></button>
+                  <h3 className="text-xl font-display font-bold mb-4 text-brand-blue flex items-center gap-2">
+                      <Star className="fill-brand-yellow text-brand-yellow"/> Award Points
+                  </h3>
+                  <form onSubmit={handleAwardTeacher} className="space-y-4">
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Points</label>
+                          <input 
+                              type="number" 
+                              value={awardPointsVal}
+                              onChange={(e) => setAwardPointsVal(parseInt(e.target.value) || 0)}
+                              className={inputClass}
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Reason</label>
+                          <textarea 
+                              value={awardReason}
+                              onChange={(e) => setAwardReason(e.target.value)}
+                              className="w-full p-3 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-brand-sky/20 outline-none h-20"
+                              placeholder="Why is this award being given?"
+                              required
+                          ></textarea>
+                      </div>
+                      <div className="pt-2">
+                          <button type="submit" className="w-full h-12 bg-brand-blue text-white font-bold rounded-lg hover:bg-brand-blue/90">
+                              Confirm Award
+                          </button>
+                      </div>
+                  </form>
+              </div>
+          </div>
       )}
 
     </div>

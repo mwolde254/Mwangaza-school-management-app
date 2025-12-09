@@ -1,5 +1,5 @@
 
-import { Student, FinanceTransaction, AttendanceRecord, LeaveRequest, Competency, UserProfile, UserRole, Assessment, AttendanceStatus, StudentNote, SchoolEvent, EventConsent, TimetableSlot, SupportTicket, AdmissionApplication, SmsTemplate, TransportRoute, TransportVehicle, TransportLog, StaffRecord, SystemConfig, SystemHealth } from '../types';
+import { Student, FinanceTransaction, AttendanceRecord, LeaveRequest, Competency, UserProfile, UserRole, Assessment, AttendanceStatus, StudentNote, SchoolEvent, EventConsent, TimetableSlot, SupportTicket, AdmissionApplication, SmsTemplate, TransportRoute, TransportVehicle, TransportLog, StaffRecord, SystemConfig, SystemHealth, PointLog } from '../types';
 
 // Simulating Firestore behavior with LocalStorage and Async delays
 const DELAY = 500;
@@ -49,7 +49,8 @@ const MOCK_USERS: UserProfile[] = [
       annual: { total: 21, used: 5 },
       sick: { total: 14, used: 0 },
       compassionate: { total: 7, used: 0 }
-    }
+    },
+    totalPoints: 120
   },
   { 
     id: 'u2', 
@@ -62,7 +63,8 @@ const MOCK_USERS: UserProfile[] = [
       annual: { total: 21, used: 12 },
       sick: { total: 14, used: 2 },
       compassionate: { total: 7, used: 0 }
-    }
+    },
+    totalPoints: 350
   },
   { 
     id: 'u3', 
@@ -84,7 +86,8 @@ const MOCK_USERS: UserProfile[] = [
       annual: { total: 21, used: 0 },
       sick: { total: 14, used: 10 },
       compassionate: { total: 7, used: 3 }
-    }
+    },
+    totalPoints: 210
   },
   { 
     id: 'u5', 
@@ -120,10 +123,18 @@ const MOCK_DATA_HEALTH: SystemHealth = {
 };
 
 const MOCK_STUDENTS: Student[] = [
-  { id: 'st1', name: 'Zuri Kamau', grade: 'Grade 4', admissionNumber: 'ADM-2023-001', parentName: 'David Kamau', contactPhone: '0712345678', contactEmail: 'david@kamau.com', balance: 15000, avatarUrl: 'https://picsum.photos/100/100?random=1', transportRouteId: 'tr1' },
-  { id: 'st2', name: 'Jabari Ochieng', grade: 'Grade 4', admissionNumber: 'ADM-2023-002', parentName: 'Grace Ochieng', contactPhone: '0722345678', contactEmail: 'grace@ochieng.com', balance: 0, avatarUrl: 'https://picsum.photos/100/100?random=2', transportRouteId: 'tr2' },
-  { id: 'st3', name: 'Nia Wanjiku', grade: 'Grade 5', admissionNumber: 'ADM-2023-003', parentName: 'Esther Wanjiku', contactPhone: '0733345678', contactEmail: 'esther@wanjiku.com', balance: 4500, avatarUrl: 'https://picsum.photos/100/100?random=3' },
-  { id: 'st4', name: 'Kofi Abdi', grade: 'Grade 4', admissionNumber: 'ADM-2023-004', parentName: 'Mohammed Abdi', contactPhone: '0744345678', contactEmail: 'mohammed@abdi.com', balance: 22000, avatarUrl: 'https://picsum.photos/100/100?random=4' },
+  { id: 'st1', name: 'Zuri Kamau', grade: 'Grade 4', admissionNumber: 'ADM-2023-001', parentName: 'David Kamau', contactPhone: '0712345678', contactEmail: 'david@kamau.com', balance: 15000, avatarUrl: 'https://picsum.photos/100/100?random=1', transportRouteId: 'tr1', totalPoints: 150 },
+  { id: 'st2', name: 'Jabari Ochieng', grade: 'Grade 4', admissionNumber: 'ADM-2023-002', parentName: 'Grace Ochieng', contactPhone: '0722345678', contactEmail: 'grace@ochieng.com', balance: 0, avatarUrl: 'https://picsum.photos/100/100?random=2', transportRouteId: 'tr2', totalPoints: 85 },
+  { id: 'st3', name: 'Nia Wanjiku', grade: 'Grade 5', admissionNumber: 'ADM-2023-003', parentName: 'Esther Wanjiku', contactPhone: '0733345678', contactEmail: 'esther@wanjiku.com', balance: 4500, avatarUrl: 'https://picsum.photos/100/100?random=3', totalPoints: 200 },
+  { id: 'st4', name: 'Kofi Abdi', grade: 'Grade 4', admissionNumber: 'ADM-2023-004', parentName: 'Mohammed Abdi', contactPhone: '0744345678', contactEmail: 'mohammed@abdi.com', balance: 22000, avatarUrl: 'https://picsum.photos/100/100?random=4', totalPoints: 120 },
+];
+
+const MOCK_POINTS: PointLog[] = [
+  { id: 'pl1', userId: 'u2', role: 'TEACHER', points: 50, reason: '100% Attendance Submission', date: '2023-10-01', awardedBy: 'SYSTEM' },
+  { id: 'pl2', userId: 'u2', role: 'TEACHER', points: 100, reason: 'All Assessments Graded', date: '2023-10-15', awardedBy: 'SYSTEM' },
+  { id: 'pl3', userId: 'st1', role: 'STUDENT', points: 10, reason: 'Top Score in Math', date: '2023-10-10', awardedBy: 'u2' },
+  { id: 'pl4', userId: 'st1', role: 'STUDENT', points: 5, reason: 'Helping Peers', date: '2023-10-12', awardedBy: 'u2' },
+  { id: 'pl5', userId: 'u4', role: 'TEACHER', points: 50, reason: '100% Attendance Submission', date: '2023-10-01', awardedBy: 'SYSTEM' },
 ];
 
 const MOCK_ASSESSMENTS: Assessment[] = [
@@ -342,6 +353,7 @@ export const db = {
       if (path === 'transport_vehicles') return getCollection<TransportVehicle>('transport_vehicles', MOCK_TRANSPORT_VEHICLES);
       if (path === 'transport_logs') return getCollection<TransportLog>('transport_logs', MOCK_TRANSPORT_LOGS);
       if (path === 'staff') return getCollection<StaffRecord>('staff', MOCK_STAFF);
+      if (path === 'points') return getCollection<PointLog>('points', MOCK_POINTS);
       return [];
     },
     // Special getter for single config docs
@@ -370,7 +382,8 @@ export const db = {
                           path === 'transport_routes' ? MOCK_TRANSPORT_ROUTES :
                           path === 'transport_vehicles' ? MOCK_TRANSPORT_VEHICLES :
                           path === 'transport_logs' ? MOCK_TRANSPORT_LOGS : 
-                          path === 'staff' ? MOCK_STAFF : [];
+                          path === 'staff' ? MOCK_STAFF : 
+                          path === 'points' ? MOCK_POINTS : [];
 
       const list = getCollection(collectionKey, defaultData as any[]);
       
@@ -422,6 +435,7 @@ export const db = {
     else if (path === 'transport_vehicles') defaultData = MOCK_TRANSPORT_VEHICLES;
     else if (path === 'transport_logs') defaultData = MOCK_TRANSPORT_LOGS;
     else if (path === 'staff') defaultData = MOCK_STAFF;
+    else if (path === 'points') defaultData = MOCK_POINTS;
     
     // Initial fetch
     const data = getCollection(path, defaultData);
