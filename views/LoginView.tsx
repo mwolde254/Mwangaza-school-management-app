@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Lock, Mail, ArrowRight, Loader2, ChevronLeft, Check } from 'lucide-react';
@@ -70,7 +71,7 @@ const LoginView: React.FC<LoginViewProps> = ({ role, onBack }) => {
   return (
     <div className="min-h-screen bg-brand-grey flex flex-col items-center justify-center p-4 relative">
        {/* Background decoration */}
-       <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-blue via-brand-green to-brand-yellow"></div>
+       <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-blue via-blue-500 to-brand-sky"></div>
 
        {/* Toast */}
        {resetSent && (

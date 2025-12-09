@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ChevronLeft, Shield, Phone, Mail, MapPin } from 'lucide-react';
 
@@ -9,7 +10,7 @@ const SignupView: React.FC<SignupViewProps> = ({ onBack }) => {
   return (
     <div className="min-h-screen bg-brand-grey flex flex-col items-center justify-center p-6 relative">
       {/* Background decoration */}
-      <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-blue via-brand-green to-brand-yellow"></div>
+      <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-blue via-blue-500 to-brand-sky"></div>
 
       <div className="w-full max-w-lg z-10 animate-slide-up">
         
@@ -24,7 +25,7 @@ const SignupView: React.FC<SignupViewProps> = ({ onBack }) => {
         </button>
 
         <div className="bg-white rounded-[12px] shadow-xl border border-gray-100 overflow-hidden">
-          <div className="bg-brand-blue p-8 text-center text-white relative overflow-hidden">
+          <div className="bg-gradient-to-br from-brand-blue to-blue-950 p-8 text-center text-white relative overflow-hidden">
              <div className="absolute top-0 left-0 w-full h-full bg-white/5 opacity-50"></div>
              <Shield size={48} className="mx-auto mb-4 text-brand-sky" />
              <h2 className="font-display font-bold text-2xl mb-2">Account Registration</h2>

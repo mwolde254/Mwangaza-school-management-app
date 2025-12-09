@@ -65,10 +65,10 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
       <div className="w-full max-w-6xl z-10 flex flex-col gap-8">
         
         {/* BRAND HERO SECTION */}
-        <div className="w-full bg-brand-blue rounded-[32px] p-12 text-center shadow-2xl relative overflow-hidden flex flex-col items-center animate-slide-up">
+        <div className="w-full bg-gradient-to-br from-brand-blue to-blue-950 rounded-[32px] p-12 text-center shadow-2xl relative overflow-hidden flex flex-col items-center animate-slide-up">
             
             {/* Decorative Geometric Background */}
-            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-10">
+            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">
                 <svg className="absolute -top-20 -left-20 w-96 h-96 text-white" viewBox="0 0 200 200" fill="currentColor">
                     <circle cx="100" cy="100" r="100" />
                 </svg>
