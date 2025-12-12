@@ -15,13 +15,26 @@ import StudentListView from './views/StudentListView';
 import SignupView from './views/SignupView';
 
 const AuthenticatedApp: React.FC = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, login } = useAuth();
   const [currentView, setCurrentView] = useState<'DASHBOARD' | 'SETTINGS' | 'STUDENTS'>('DASHBOARD');
   const [currentStudentId, setCurrentStudentId] = useState<string | null>(null);
   
   // Auth Flow State
   const [authStep, setAuthStep] = useState<'LANDING' | 'LOGIN' | 'SIGNUP'>('LANDING');
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+
+  const handleDevLogin = async (role: UserRole) => {
+    let email = '';
+    switch(role) {
+      case UserRole.ADMIN: email = 'sysadmin@school.com'; break;
+      case UserRole.PRINCIPAL: email = 'admin@school.com'; break;
+      case UserRole.TEACHER: email = 'teacher@school.com'; break;
+      case UserRole.PARENT: email = 'parent@school.com'; break;
+    }
+    if(email) {
+       await login(email);
+    }
+  };
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-brand-blue font-bold">Loading...</div>;
@@ -48,6 +61,7 @@ const AuthenticatedApp: React.FC = () => {
           setAuthStep('LOGIN'); 
         }}
         onSignupSelect={() => setAuthStep('SIGNUP')} 
+        onDevLogin={handleDevLogin}
       />
     );
   }

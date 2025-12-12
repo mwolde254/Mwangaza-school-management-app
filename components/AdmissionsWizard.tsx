@@ -108,7 +108,7 @@ const AdmissionsWizard: React.FC<AdmissionsWizardProps> = ({ onExit }) => {
         <div className="max-w-4xl mx-auto w-full mt-12 flex-1 flex flex-col">
             {/* Header */}
             <div className="text-center mb-8">
-                <h1 className="font-display font-bold text-3xl text-brand-blue mb-2">Join Our Community</h1>
+                <h1 className="font-display font-bold text-3xl text-brand-green mb-2">Join Our Community</h1>
                 <p className="text-gray-500">Complete the admission process online.</p>
             </div>
 
@@ -122,12 +122,12 @@ const AdmissionsWizard: React.FC<AdmissionsWizardProps> = ({ onExit }) => {
                         <div key={step.id} className="flex flex-col items-center bg-brand-grey px-2">
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center border-4 transition-all ${
                                 isCompleted ? 'bg-brand-green border-brand-green text-white' : 
-                                isActive ? 'bg-white border-brand-blue text-brand-blue' : 
+                                isActive ? 'bg-white border-brand-green text-brand-green' : 
                                 'bg-white border-gray-200 text-gray-300'
                             }`}>
                                 {isCompleted ? <Check size={16}/> : <step.icon size={16}/>}
                             </div>
-                            <span className={`text-xs font-bold mt-2 ${isActive ? 'text-brand-blue' : 'text-gray-400'}`}>{step.title}</span>
+                            <span className={`text-xs font-bold mt-2 ${isActive ? 'text-brand-green' : 'text-gray-400'}`}>{step.title}</span>
                         </div>
                     );
                 })}
@@ -139,7 +139,7 @@ const AdmissionsWizard: React.FC<AdmissionsWizardProps> = ({ onExit }) => {
                 {/* STEP 1: INQUIRY / PARENT INFO */}
                 {currentStep === 1 && (
                     <div className="space-y-6 animate-fade-in">
-                        <h3 className="font-display font-bold text-xl text-gray-800">Parent / Guardian Information</h3>
+                        <h3 className="font-display font-bold text-xl text-gray-800 border-l-4 border-brand-green pl-3">Parent / Guardian Information</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className={labelClass}>Full Name</label>
@@ -175,7 +175,7 @@ const AdmissionsWizard: React.FC<AdmissionsWizardProps> = ({ onExit }) => {
                 {/* STEP 2: STUDENT INFO */}
                 {currentStep === 2 && (
                     <div className="space-y-6 animate-fade-in">
-                        <h3 className="font-display font-bold text-xl text-gray-800">Student Details</h3>
+                        <h3 className="font-display font-bold text-xl text-gray-800 border-l-4 border-brand-green pl-3">Student Details</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className={labelClass}>Child's Full Name</label>
@@ -199,7 +199,7 @@ const AdmissionsWizard: React.FC<AdmissionsWizardProps> = ({ onExit }) => {
                 {/* STEP 3: MEDICAL */}
                 {currentStep === 3 && (
                     <div className="space-y-6 animate-fade-in">
-                        <h3 className="font-display font-bold text-xl text-gray-800">Medical & Special Needs</h3>
+                        <h3 className="font-display font-bold text-xl text-gray-800 border-l-4 border-brand-green pl-3">Medical & Special Needs</h3>
                         
                         <div className="p-4 border border-gray-200 rounded-[12px]">
                             <label className="flex items-center justify-between cursor-pointer">
@@ -236,7 +236,7 @@ const AdmissionsWizard: React.FC<AdmissionsWizardProps> = ({ onExit }) => {
                 {/* STEP 4: DOCUMENTS */}
                 {currentStep === 4 && (
                     <div className="space-y-6 animate-fade-in">
-                        <h3 className="font-display font-bold text-xl text-gray-800">Document Upload</h3>
+                        <h3 className="font-display font-bold text-xl text-gray-800 border-l-4 border-brand-green pl-3">Document Upload</h3>
                         <p className="text-gray-500 text-sm">Please upload clear scans or photos of the following.</p>
 
                         {[
@@ -265,7 +265,7 @@ const AdmissionsWizard: React.FC<AdmissionsWizardProps> = ({ onExit }) => {
                 {/* STEP 5: REVIEW */}
                 {currentStep === 5 && (
                     <div className="space-y-6 animate-fade-in">
-                        <h3 className="font-display font-bold text-xl text-gray-800">Review Application</h3>
+                        <h3 className="font-display font-bold text-xl text-gray-800 border-l-4 border-brand-green pl-3">Review Application</h3>
                         <div className="bg-gray-50 p-6 rounded-[12px] border border-gray-100 space-y-4">
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div><span className="text-gray-500 block">Parent</span> <span className="font-bold">{formData.parentName}</span></div>

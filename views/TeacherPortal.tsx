@@ -1,68 +1,62 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useStudentData } from '../context/StudentDataContext';
 import { useAuth } from '../context/AuthContext';
 import { AttendanceStatus, AttendanceRecord, Competency, LeaveType } from '../types';
 import { format, isSameDay, addDays, differenceInBusinessDays, parseISO } from 'date-fns';
-import { Check, Clock, X, Save, Edit3, Award, Plus, AlertCircle, ChevronDown, ArrowLeft, Send, BookOpen, Users, ArrowRight, Calendar, Loader2, Briefcase, Stethoscope, Palmtree, Heart, Table, Star, Trophy } from 'lucide-react';
+import { Check, Clock, X, Save, Edit3, Award, Plus, AlertCircle, ChevronDown, ArrowLeft, Send, BookOpen, Users, ArrowRight, Calendar, Loader2, Briefcase, Stethoscope, Palmtree, Heart, Table, GraduationCap } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 import TimetableModule from '../components/TimetableModule';
 
 const TeacherPortal: React.FC = () => {
-  const { students, submitAttendance, assessments, addAssessment, updateAssessment, attendance, competencies, addCompetency, events, leaveRequests, submitLeaveRequest, users, awardPoints } = useStudentData(); 
+  const { students, submitAttendance, assessments, addAssessment, updateAssessment, attendance, competencies, addStudent, events, leaveRequests, submitLeaveRequest, users } = useStudentData(); 
   const { user } = useAuth();
   const [mode, setMode] = useState<'DASHBOARD' | 'ATTENDANCE' | 'ASSESSMENT' | 'COMPETENCY' | 'LEAVE' | 'TIMETABLE'>('DASHBOARD');
-  const [selectedClass, setSelectedClass] = useState('Grade 4 - Mathematics');
   
+  // -- CLASS CONTEXT SWITCHER --
+  const myClasses = [
+    { id: '4A', name: 'Grade 4 - Mathematics' },
+    { id: '5B', name: 'Grade 5 - Science' },
+    { id: '8C', name: 'Grade 8 - Homeroom' }
+  ];
+  const [selectedClass, setSelectedClass] = useState(myClasses[0]);
+  const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
+
   // -- DASHBOARD METRICS CALCULATION --
-  const todayStr = format(new Date(), 'yyyy-MM-dd');
-  const todaysAttendance = attendance.filter(a => a.date === todayStr);
-  const totalStudents = students.length;
   
-  const presentCount = todaysAttendance.filter(a => a.status === AttendanceStatus.PRESENT).length;
-  const lateCount = todaysAttendance.filter(a => a.status === AttendanceStatus.LATE).length;
-  const absentCount = todaysAttendance.filter(a => a.status === AttendanceStatus.ABSENT).length;
-  // If no attendance taken yet, assume all absent or 0 for display? 
-  // Let's rely on actual records. If record count < total students, the rest are "Pending" technically, but UI shows Absent/Late/Present.
-  // For dashboard visual, if no records, maybe show 0s or assume pending. The previous mock assumed 80% present.
-  // We will stick to actual counts.
+  // Attendance Summary
+  const totalStudents = students.length;
+  const presentCount = Math.floor(totalStudents * 0.8); 
+  const lateCount = Math.floor(totalStudents * 0.1);
+  const absentCount = totalStudents - presentCount - lateCount;
 
   // CBC Summary
-  const recentCompetencies = competencies.filter(c => true); // In real app, filter by date range
-  const emergingCompetencies = recentCompetencies.filter(c => c.rating === 'Emerging');
-  const recentCompetenciesCount = recentCompetencies.length; 
-  const cbcProgress = Math.min(100, Math.round((recentCompetenciesCount / (totalStudents * 5)) * 100)) || 0; // Mock target of 5 comps per student
+  const emergingCompetencies = competencies.filter(c => c.rating === 'Emerging');
+  const recentCompetenciesCount = competencies.length; 
+  const cbcProgress = 65; 
 
   // Assessment Summary
-  const totalAssessments = assessments.length;
-  const avgScore = totalAssessments > 0 
-    ? Math.round(assessments.reduce((acc, curr) => acc + curr.score, 0) / totalAssessments) 
-    : 0;
-  // Ungraded count approximation (assuming 2 subjects per student target)
-  const expectedAssessments = totalStudents * 2; 
-  const ungradedCount = Math.max(0, expectedAssessments - totalAssessments);
+  const avgScore = Math.round(assessments.reduce((acc, curr) => acc + curr.score, 0) / (assessments.length || 1));
+  const ungradedCount = 5; 
 
+  // Homework Mock Data
+  const homeworkData = [
+    { status: 'Submitted', count: 24, fill: '#059669' },
+    { status: 'Late', count: 4, fill: '#FCD34D' },
+    { status: 'Missing', count: 2, fill: '#EF4444' },
+  ];
+  
   // Schedule Logic
   const today = new Date();
   const todaysEvents = events.filter(e => isSameDay(new Date(e.startDate), today));
   const tomorrowsEvents = events.filter(e => isSameDay(new Date(e.startDate), addDays(today, 1)));
 
   // -- ACTION STATE MANAGEMENT --
-  // Initialize with existing data if available for today
-  const [attendanceState, setAttendanceState] = useState<Record<string, { status: AttendanceStatus, minutes: number }>>({});
-
-  useEffect(() => {
+  const [attendanceState, setAttendanceState] = useState<Record<string, { status: AttendanceStatus, minutes: number }>>(() => {
     const initial: any = {};
-    students.forEach(s => {
-        const existingRecord = attendance.find(a => a.studentId === s.id && a.date === todayStr);
-        if (existingRecord) {
-            initial[s.id] = { status: existingRecord.status, minutes: existingRecord.minutesLate || 0 };
-        } else {
-            initial[s.id] = { status: AttendanceStatus.PRESENT, minutes: 0 };
-        }
-    });
-    setAttendanceState(initial);
-  }, [students, attendance, todayStr]);
+    students.forEach(s => initial[s.id] = { status: AttendanceStatus.PRESENT, minutes: 0 });
+    return initial;
+  });
 
   const [saving, setSaving] = useState(false);
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
@@ -79,11 +73,6 @@ const TeacherPortal: React.FC = () => {
   
   // Balances (Mocked logic if user balances are missing)
   const balances = user?.leaveBalances || { annual: { total: 21, used: 0 }, sick: { total: 14, used: 0 }, compassionate: { total: 7, used: 0 } };
-
-  // -- GAMIFICATION STATE --
-  const [showPointsModal, setShowPointsModal] = useState(false);
-  const [pointReason, setPointReason] = useState('Excellent Participation');
-  const [pointsVal, setPointsVal] = useState(5);
 
   const getLeaveIcon = (type: LeaveType) => {
     switch(type) {
@@ -129,9 +118,9 @@ const TeacherPortal: React.FC = () => {
         const records: AttendanceRecord[] = students.map(student => {
             const data = attendanceState[student.id] || { status: AttendanceStatus.PRESENT, minutes: 0 };
             return {
-                id: Math.random().toString(36), // In real backend, this ID generation happens there
+                id: Math.random().toString(36),
                 studentId: student.id,
-                date: todayStr,
+                date: format(new Date(), 'yyyy-MM-dd'),
                 status: data.status,
                 minutesLate: data.status === AttendanceStatus.LATE ? data.minutes : undefined
             };
@@ -193,8 +182,8 @@ const TeacherPortal: React.FC = () => {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [mathScore, setMathScore] = useState(0);
   const [englishScore, setEnglishScore] = useState(0);
-  const [competencyStrand, setCompetencyStrand] = useState('Numbers & Operations');
-  const [competencyRating, setCompetencyRating] = useState<'Emerging' | 'Developing' | 'Meeting Expectation' | 'Exceeding'>('Meeting Expectation');
+  const [competencyStrand, setCompetencyStrand] = useState('');
+  const [competencyRating, setCompetencyRating] = useState('Meeting Expectation');
 
   const openAssessment = (studentId: string) => {
     setSelectedStudentId(studentId);
@@ -213,45 +202,10 @@ const TeacherPortal: React.FC = () => {
     setShowModal(true);
   };
 
-  const openPoints = (studentId: string) => {
-      setSelectedStudentId(studentId);
-      setPointReason('Excellent Participation');
-      setPointsVal(5);
-      setShowPointsModal(true);
-  };
-
   const handleSaveAssessment = async () => {
     if (!selectedStudentId) return;
     setSaving(true);
-    
-    // Save Math
-    const existingMath = assessments.find(a => a.studentId === selectedStudentId && a.subject === 'Mathematics');
-    if (existingMath) {
-        await updateAssessment(existingMath.id, { score: mathScore });
-    } else {
-        await addAssessment({
-            studentId: selectedStudentId,
-            subject: 'Mathematics',
-            score: mathScore,
-            total: 100,
-            comments: 'Recorded by teacher'
-        });
-    }
-
-    // Save English
-    const existingEng = assessments.find(a => a.studentId === selectedStudentId && a.subject === 'English');
-    if (existingEng) {
-        await updateAssessment(existingEng.id, { score: englishScore });
-    } else {
-        await addAssessment({
-            studentId: selectedStudentId,
-            subject: 'English',
-            score: englishScore,
-            total: 100,
-            comments: 'Recorded by teacher'
-        });
-    }
-
+    await new Promise(r => setTimeout(r, 1000));
     setSaving(false);
     setShowModal(false);
     showNotification("Assessment marks updated!", "success");
@@ -260,27 +214,16 @@ const TeacherPortal: React.FC = () => {
   const handleSaveCompetency = async () => {
     if (!selectedStudentId) return;
     setSaving(true);
-    
-    await addCompetency({
-        studentId: selectedStudentId,
-        subject: 'Mathematics', // Defaulting to currently selected subject context
-        strand: competencyStrand,
-        rating: competencyRating,
-        notes: 'Observed in class'
-    });
-
+    await new Promise(r => setTimeout(r, 1000));
     setSaving(false);
     setShowModal(false);
     showNotification("Competency recorded!", "success");
   };
 
-  const handleAwardStudent = async () => {
-      if (!selectedStudentId || !user) return;
-      setSaving(true);
-      await awardPoints(selectedStudentId, 'STUDENT', pointsVal, pointReason, user.id);
-      setSaving(false);
-      setShowPointsModal(false);
-      showNotification("Points awarded successfully!", "success");
+  const handleClassSwitch = (cls: typeof myClasses[0]) => {
+      setSelectedClass(cls);
+      setIsClassDropdownOpen(false);
+      showNotification(`Switched to ${cls.name}`, 'success');
   };
 
   const selectedStudent = students.find(s => s.id === selectedStudentId);
@@ -341,18 +284,38 @@ const TeacherPortal: React.FC = () => {
         </div>
         
         {mode !== 'LEAVE' && mode !== 'TIMETABLE' && (
-            <div className="relative group">
-            <label className="absolute -top-2 left-3 bg-brand-grey px-1 text-[10px] font-bold text-gray-500 uppercase">Currently Teaching</label>
-            <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-4 h-12 min-w-[240px] shadow-sm cursor-pointer hover:border-brand-sky/50 transition-colors">
-                <span className="flex-1 font-semibold text-gray-700">{selectedClass}</span>
-                <ChevronDown size={16} className="text-gray-400" />
-            </div>
+            <div className="relative group z-30">
+                <label className="absolute -top-2 left-3 bg-brand-grey px-1 text-[10px] font-bold text-gray-500 uppercase z-10">Currently Teaching</label>
+                <div className="relative">
+                    <button 
+                        onClick={() => setIsClassDropdownOpen(!isClassDropdownOpen)}
+                        className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-4 h-12 min-w-[240px] shadow-sm cursor-pointer hover:border-brand-blue hover:text-brand-blue transition-colors outline-none focus:ring-2 focus:ring-brand-sky/20"
+                    >
+                        <span className="flex-1 font-bold font-display text-left truncate">{selectedClass.name}</span>
+                        <ChevronDown size={16} className={`text-gray-400 transition-transform ${isClassDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {isClassDropdownOpen && (
+                        <div className="absolute top-full right-0 mt-2 w-full bg-white rounded-xl shadow-xl border border-gray-100 p-1.5 animate-slide-up overflow-hidden">
+                            {myClasses.map(cls => (
+                                <button
+                                    key={cls.id}
+                                    onClick={() => handleClassSwitch(cls)}
+                                    className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-bold flex items-center justify-between transition-colors ${selectedClass.id === cls.id ? 'bg-brand-blue/5 text-brand-blue' : 'text-gray-600 hover:bg-gray-50'}`}
+                                >
+                                    <span>{cls.name}</span>
+                                    {selectedClass.id === cls.id && <Check size={14} />}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
         )}
       </div>
 
       {/* QUICK ACTIONS BAR */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap gap-4 sticky top-0 z-40">
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap gap-4 sticky top-0 z-20">
         {mode !== 'DASHBOARD' && (
           <button onClick={() => setMode('DASHBOARD')} className={`w-12 h-12 flex items-center justify-center bg-gray-100 text-gray-600 hover:bg-gray-200 ${btnBase}`}>
             <ArrowLeft size={20} />
@@ -401,27 +364,6 @@ const TeacherPortal: React.FC = () => {
           
           {/* COL 1: CLASS STATUS PANEL */}
           <div className="space-y-6">
-             {/* My Performance Score Widget */}
-             <div className="bg-gradient-to-r from-brand-blue to-blue-900 rounded-xl p-6 text-white relative overflow-hidden shadow-lg border border-blue-900">
-                 <div className="absolute -top-4 -right-4 w-24 h-24 bg-white opacity-10 rounded-full blur-xl"></div>
-                 <div className="flex justify-between items-start mb-4 relative z-10">
-                     <div>
-                         <h3 className="text-blue-100 text-xs font-bold uppercase tracking-wider mb-1">My Performance Score</h3>
-                         <div className="flex items-baseline gap-2">
-                             <span className="text-4xl font-display font-extrabold">{user?.totalPoints || 0}</span>
-                             <span className="text-sm font-bold text-brand-yellow">Points</span>
-                         </div>
-                     </div>
-                     <div className="p-3 bg-white/10 rounded-full">
-                         <Trophy size={24} className="text-brand-yellow"/>
-                     </div>
-                 </div>
-                 <div className="w-full bg-black/20 h-2 rounded-full overflow-hidden">
-                     <div className="h-full bg-brand-yellow w-3/4"></div>
-                 </div>
-                 <p className="text-xs text-blue-200 mt-2">Top 15% of staff this month. Keep it up!</p>
-             </div>
-
              {/* Schedule & Duties Widget */}
              <div className={cardBase}>
                <div className="flex justify-between items-center mb-4">
@@ -449,10 +391,27 @@ const TeacherPortal: React.FC = () => {
                         <div className="flex gap-3 p-2 border-l-2 border-brand-green bg-brand-green/5 rounded-r-lg">
                            <span className="text-xs font-bold text-gray-600">08:00</span>
                            <div>
-                              <p className="text-sm font-bold text-gray-800">Mathematics - Grade 4</p>
+                              <p className="text-sm font-bold text-gray-800">{selectedClass.name}</p>
                               <p className="text-[10px] text-gray-500">Regular Session</p>
                            </div>
                         </div>
+                     </div>
+                  </div>
+
+                   {/* Tomorrow */}
+                  <div className="pt-2 border-t border-gray-100">
+                     <p className="text-xs font-bold text-gray-400 uppercase mb-2">Tomorrow</p>
+                      <div className="space-y-2">
+                        {tomorrowsEvents.length > 0 ? tomorrowsEvents.map(e => (
+                           <div key={e.id} className="flex gap-3 p-2 border-l-2 border-gray-300 bg-gray-50 rounded-r-lg">
+                              <span className="text-xs font-bold text-gray-600">{format(new Date(e.startDate), 'HH:mm')}</span>
+                              <div>
+                                 <p className="text-sm font-bold text-gray-800">{e.title}</p>
+                              </div>
+                           </div>
+                        )) : (
+                           <div className="text-xs text-gray-400 italic">No specific events scheduled.</div>
+                        )}
                      </div>
                   </div>
                </div>
@@ -519,16 +478,13 @@ const TeacherPortal: React.FC = () => {
 
                 <div className="space-y-2">
                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">Needs Review / Emerging</h4>
-                   {emergingCompetencies.length > 0 ? emergingCompetencies.slice(0, 3).map((comp, idx) => {
-                     const student = students.find(s => s.id === comp.studentId);
-                     return (
+                   {emergingCompetencies.length > 0 ? emergingCompetencies.slice(0, 3).map((comp, idx) => (
                      <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
                         <div className="flex items-center gap-3">
-                           <div className="w-8 h-8 rounded-full bg-brand-yellow/20 flex items-center justify-center text-brand-yellow font-bold text-xs">
-                               {student ? student.name[0] : '?'}
-                           </div>
+                           {/* Finding student name from ID would require lookup, simplified for mock */}
+                           <div className="w-8 h-8 rounded-full bg-brand-yellow/20 flex items-center justify-center text-brand-yellow font-bold text-xs">?</div>
                            <div>
-                             <p className="text-xs font-bold text-gray-700">{student?.name || 'Unknown'}</p>
+                             <p className="text-xs font-bold text-gray-700">{comp.subject}</p>
                              <p className="text-[10px] text-gray-500">{comp.strand}</p>
                            </div>
                         </div>
@@ -539,7 +495,7 @@ const TeacherPortal: React.FC = () => {
                            </button>
                         </div>
                      </div>
-                   )}) : (
+                   )) : (
                      <p className="text-xs text-gray-400 italic">No emerging competencies flagged.</p>
                    )}
                 </div>
@@ -574,7 +530,7 @@ const TeacherPortal: React.FC = () => {
           {/* Header */}
           <div className="p-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
             <div>
-               <h3 className="font-display font-bold text-lg text-brand-blue">{selectedClass}</h3>
+               <h3 className="font-display font-bold text-lg text-brand-blue">{selectedClass.name}</h3>
                <p className="text-xs text-gray-500 font-medium flex items-center gap-1 mt-1">
                  <Calendar size={12}/> {format(new Date(), 'EEEE, MMMM do')}
                </p>
@@ -702,23 +658,12 @@ const TeacherPortal: React.FC = () => {
                           </p>
                         </div>
                     </div>
-                    <div className="flex gap-2">
-                        {mode === 'COMPETENCY' && (
-                            <button 
-                                onClick={() => openPoints(student.id)}
-                                className="w-8 h-8 flex items-center justify-center rounded-full bg-brand-yellow/10 text-brand-yellow hover:bg-brand-yellow/20"
-                                title="Award Points"
-                            >
-                                <Star size={16} className="fill-brand-yellow"/>
-                            </button>
-                        )}
-                        <button 
-                        onClick={() => mode === 'ASSESSMENT' ? openAssessment(student.id) : openCompetency(student.id)}
-                        className={`text-xs font-bold px-3 py-2 rounded focus:outline-none focus:ring-2 ${mode === 'ASSESSMENT' ? 'text-brand-sky bg-brand-sky/10 hover:bg-brand-sky/20 focus:ring-brand-sky/50' : 'text-brand-blue bg-brand-blue/10 hover:bg-brand-blue/20 focus:ring-brand-blue/50'}`}
-                        >
-                        {mode === 'ASSESSMENT' ? 'Manage Marks' : 'Add Entry'}
-                        </button>
-                    </div>
+                    <button 
+                      onClick={() => mode === 'ASSESSMENT' ? openAssessment(student.id) : openCompetency(student.id)}
+                      className={`text-xs font-bold px-3 py-2 rounded focus:outline-none focus:ring-2 ${mode === 'ASSESSMENT' ? 'text-brand-sky bg-brand-sky/10 hover:bg-brand-sky/20 focus:ring-brand-sky/50' : 'text-brand-blue bg-brand-blue/10 hover:bg-brand-blue/20 focus:ring-brand-blue/50'}`}
+                    >
+                      {mode === 'ASSESSMENT' ? 'Manage Marks' : 'Add Entry'}
+                    </button>
                   </div>
                  );
               })}
@@ -854,7 +799,7 @@ const TeacherPortal: React.FC = () => {
                        {['Emerging', 'Developing', 'Meeting Expectation', 'Exceeding'].map(lvl => (
                          <div 
                            key={lvl}
-                           onClick={() => setCompetencyRating(lvl as any)}
+                           onClick={() => setCompetencyRating(lvl)}
                            className={`p-3 rounded-lg border cursor-pointer flex items-center justify-between transition-all ${competencyRating === lvl ? 'bg-brand-blue/5 border-brand-blue ring-1 ring-brand-blue' : 'bg-white border-gray-200 hover:border-brand-sky/50'}`}
                          >
                            <span className={`text-sm font-bold ${competencyRating === lvl ? 'text-brand-blue' : 'text-gray-600'}`}>{lvl}</span>
@@ -877,54 +822,6 @@ const TeacherPortal: React.FC = () => {
              </div>
           </div>
         </div>
-      )}
-
-      {/* POINTS AWARD MODAL */}
-      {showPointsModal && selectedStudent && (
-          <div className="fixed inset-0 bg-brand-blue/20 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-              <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl relative animate-slide-up border border-gray-100">
-                  <button onClick={() => setShowPointsModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 rounded-full p-1"><X size={20}/></button>
-                  <h3 className="text-xl font-display font-bold mb-4 text-brand-blue flex items-center gap-2">
-                      <Star className="fill-brand-yellow text-brand-yellow"/> Award Points
-                  </h3>
-                  <p className="text-sm text-gray-500 mb-6">Recognize <span className="font-bold text-gray-800">{selectedStudent.name}</span>.</p>
-                  
-                  <form onSubmit={(e) => { e.preventDefault(); handleAwardStudent(); }} className="space-y-4">
-                      <div>
-                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Achievement</label>
-                          <select 
-                              value={pointReason}
-                              onChange={(e) => setPointReason(e.target.value)}
-                              className={inputClass}
-                          >
-                              <option value="Excellent Participation">Excellent Participation (+5)</option>
-                              <option value="Top Score">Top Assessment Score (+10)</option>
-                              <option value="Leadership">Leadership (+15)</option>
-                              <option value="Good Behavior">Good Behavior (+5)</option>
-                              <option value="Homework Completion">Homework on Time (+5)</option>
-                          </select>
-                      </div>
-                      <div>
-                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Points</label>
-                          <input 
-                              type="number" 
-                              value={pointsVal}
-                              onChange={(e) => setPointsVal(parseInt(e.target.value) || 0)}
-                              className={inputClass}
-                          />
-                      </div>
-                      <div className="pt-2">
-                          <button 
-                            type="submit" 
-                            disabled={saving}
-                            className={`w-full h-12 bg-brand-blue text-white rounded-lg font-bold hover:bg-brand-blue/90 flex items-center justify-center gap-2`}
-                          >
-                              {saving ? <Loader2 className="animate-spin" size={18}/> : 'Award'}
-                          </button>
-                      </div>
-                  </form>
-              </div>
-          </div>
       )}
 
       {/* LEAVE REQUEST MODAL */}

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Gavel, BookOpen, Home, ChevronLeft, LogIn, UserPlus, Settings, Sparkles, CheckCircle2, TrendingUp, Shield, MessageCircle, Menu, X, ArrowRight, Quote, Phone, Mail, LayoutDashboard, Smartphone, Check, ChevronDown } from 'lucide-react';
+import { Gavel, BookOpen, Home, ChevronLeft, LogIn, UserPlus, Settings, Sparkles, CheckCircle2, TrendingUp, Shield, MessageCircle, Menu, X, ArrowRight, Quote, Phone, Mail, LayoutDashboard, Smartphone, Check, ChevronDown, Terminal, Calendar as CalendarIcon, MapPin } from 'lucide-react';
 import { UserRole } from '../types';
 import AdmissionsWizard from '../components/AdmissionsWizard';
 import { db } from '../services/db';
@@ -8,6 +8,7 @@ import { db } from '../services/db';
 interface LandingViewProps {
   onLoginSelect: (role: UserRole) => void;
   onSignupSelect: () => void;
+  onDevLogin?: (role: UserRole) => void;
 }
 
 // --- SUB-COMPONENTS ---
@@ -21,7 +22,7 @@ const MwangazaLogo = ({ className = "w-10 h-10" }: { className?: string }) => (
   </div>
 );
 
-const Navbar = ({ onLoginClick, onRequestDemo }: { onLoginClick: () => void, onRequestDemo: () => void }) => {
+const Navbar = ({ onLoginClick, onRequestDemo, onApplyNow }: { onLoginClick: () => void, onRequestDemo: () => void, onApplyNow: () => void }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -79,12 +80,12 @@ const Navbar = ({ onLoginClick, onRequestDemo }: { onLoginClick: () => void, onR
            />
            <NavItem 
              title="Community" 
-             href="#testimonials" 
-             subItems={['Testimonials', 'Success Stories', 'Partner Schools', 'Events Gallery']} 
+             href="#community" 
+             subItems={['School Events', 'Student Life', 'Testimonials', 'Parent Association']} 
            />
            <NavItem 
              title="About" 
-             href="#" 
+             href="#about" 
              subItems={['Our Mission', 'Leadership Team', 'Careers', 'Contact Support']} 
            />
         </div>
@@ -92,10 +93,10 @@ const Navbar = ({ onLoginClick, onRequestDemo }: { onLoginClick: () => void, onR
         {/* CTA */}
         <div className="hidden md:flex items-center gap-4">
           <button 
-            onClick={onRequestDemo}
-            className="px-5 py-2.5 text-brand-blue font-bold hover:bg-brand-blue/5 rounded-full transition-all text-sm border border-transparent hover:border-brand-blue/10"
+            onClick={onApplyNow}
+            className="px-5 py-2.5 text-brand-green font-bold hover:bg-brand-green/5 rounded-full transition-all text-sm border border-transparent hover:border-brand-green/10"
           >
-            Request Demo
+            Apply for Admission
           </button>
           <button 
             onClick={onLoginClick}
@@ -122,10 +123,10 @@ const Navbar = ({ onLoginClick, onRequestDemo }: { onLoginClick: () => void, onR
             ))}
             <hr className="border-gray-100 my-2"/>
             <button 
-              onClick={() => { onRequestDemo(); setMobileMenuOpen(false); }}
-              className="w-full py-3 border border-brand-blue text-brand-blue font-bold rounded-xl"
+              onClick={() => { onApplyNow(); setMobileMenuOpen(false); }}
+              className="w-full py-3 bg-brand-green/10 text-brand-green font-bold rounded-xl"
             >
-              Request Demo
+              Apply for Admission
             </button>
             <button 
               onClick={() => { onLoginClick(); setMobileMenuOpen(false); }}
@@ -173,9 +174,32 @@ const TestimonialCard = ({ quote, author, role }: { quote: string, author: strin
   </div>
 );
 
+const EventCard = ({ date, title, category, image }: { date: string, title: string, category: string, image: string }) => (
+  <div className="group rounded-2xl overflow-hidden cursor-pointer relative h-64 shadow-md hover:shadow-xl transition-all">
+    <img src={image} alt={title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"/>
+    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent p-6 flex flex-col justify-end">
+       <span className="inline-block w-fit px-2 py-1 rounded bg-brand-yellow text-[10px] font-bold text-brand-blue uppercase mb-2">{category}</span>
+       <h4 className="text-white font-display font-bold text-xl leading-tight mb-1">{title}</h4>
+       <p className="text-white/70 text-xs flex items-center gap-2">
+          <CalendarIcon size={12}/> {date}
+       </p>
+    </div>
+  </div>
+);
+
+const TeamCard = ({ name, role, img }: { name: string, role: string, img: string }) => (
+  <div className="text-center group">
+    <div className="w-24 h-24 mx-auto rounded-full overflow-hidden mb-4 border-4 border-white shadow-lg group-hover:border-brand-sky transition-colors">
+      <img src={img} alt={name} className="w-full h-full object-cover"/>
+    </div>
+    <h4 className="font-bold text-gray-800 text-lg">{name}</h4>
+    <p className="text-xs text-brand-blue font-bold uppercase tracking-wide mt-1">{role}</p>
+  </div>
+);
+
 // --- MODALS ---
 
-const LoginSelectionModal = ({ isOpen, onClose, onSelect }: { isOpen: boolean; onClose: () => void; onSelect: (role: UserRole) => void }) => {
+const LoginSelectionModal = ({ isOpen, onClose, onSelect, onSignup }: { isOpen: boolean; onClose: () => void; onSelect: (role: UserRole) => void; onSignup: () => void }) => {
   if (!isOpen) return null;
 
   const roles = [
@@ -211,6 +235,15 @@ const LoginSelectionModal = ({ isOpen, onClose, onSelect }: { isOpen: boolean; o
               <p className="text-[10px] text-gray-400">{role.desc}</p>
             </button>
           ))}
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+            <button 
+                onClick={() => { onClose(); onSignup(); }}
+                className="text-xs font-bold text-brand-blue hover:underline"
+            >
+                New to Mwangaza? Registration Information
+            </button>
         </div>
       </div>
     </div>
@@ -314,7 +347,7 @@ const LeadCaptureModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
 
 // --- MAIN PAGE COMPONENT ---
 
-const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect }) => {
+const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect, onDevLogin }) => {
   const [showWizard, setShowWizard] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showLeadModal, setShowLeadModal] = useState(false);
@@ -325,7 +358,11 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
 
   return (
     <div className="min-h-screen bg-white font-sans text-gray-800 scroll-smooth">
-      <Navbar onLoginClick={() => setShowLoginModal(true)} onRequestDemo={() => setShowLeadModal(true)} />
+      <Navbar 
+        onLoginClick={() => setShowLoginModal(true)} 
+        onRequestDemo={() => setShowLeadModal(true)}
+        onApplyNow={() => setShowWizard(true)}
+      />
 
       {/* HERO SECTION */}
       <section className="relative pt-32 pb-20 lg:pt-40 lg:pb-32 overflow-hidden bg-gradient-to-b from-brand-grey to-white" id="hero-portal">
@@ -357,11 +394,14 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
                 onClick={() => setShowLeadModal(true)}
                 className="px-8 py-4 bg-[#1E3A8A] text-white font-bold rounded-xl shadow-xl shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all hover:-translate-y-1 flex items-center gap-2"
               >
-                Try Mwangaza <ArrowRight size={18}/>
+                Request Demo <ArrowRight size={18}/>
               </button>
-              <a href="#features" className="px-8 py-4 bg-white text-gray-700 font-bold rounded-xl shadow-sm border border-gray-200 hover:border-brand-blue hover:text-brand-blue transition-all">
-                Learn More
-              </a>
+              <button 
+                onClick={() => setShowWizard(true)} 
+                className="px-8 py-4 bg-white text-brand-green font-bold rounded-xl shadow-sm border border-gray-200 hover:border-brand-green hover:text-brand-green transition-all"
+              >
+                Apply for Admission
+              </button>
             </div>
 
             <div className="pt-8 flex items-center justify-center lg:justify-start gap-6 text-sm font-bold text-gray-400">
@@ -440,7 +480,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
          </div>
       </section>
 
-      {/* VISUAL FEATURES SHOWCASE (New Section) */}
+      {/* VISUAL FEATURES SHOWCASE */}
       <section className="py-24 bg-gray-50 overflow-hidden border-t border-gray-100">
         <div className="max-w-7xl mx-auto px-6 space-y-24">
           
@@ -536,10 +576,38 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
         </div>
       </section>
 
-      {/* TESTIMONIALS */}
-      <section className="py-24 bg-brand-grey/50 border-t border-gray-200" id="testimonials">
+      {/* COMMUNITY SECTION (New & Expanded) */}
+      <section id="community" className="py-24 bg-white border-t border-gray-100">
          <div className="max-w-7xl mx-auto px-6">
-            <h2 className="font-display font-extrabold text-3xl text-center text-gray-900 mb-16">Trusted by Educators & Parents</h2>
+            <div className="text-center mb-16">
+               <h2 className="text-brand-blue font-bold text-sm uppercase tracking-widest mb-3">Our Community</h2>
+               <h3 className="font-display font-extrabold text-3xl text-gray-900">Life at Mwangaza</h3>
+            </div>
+
+            {/* Events Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
+               <EventCard 
+                  date="Oct 28, 2023"
+                  title="Regional Science Fair"
+                  category="Academics"
+                  image="https://images.unsplash.com/photo-1564939558297-fc396f18e5c7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+               />
+               <EventCard 
+                  date="Nov 05, 2023"
+                  title="Sports Day Finals"
+                  category="Athletics"
+                  image="https://images.unsplash.com/photo-1461896836934-ffe607ba8211?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+               />
+               <EventCard 
+                  date="Dec 10, 2023"
+                  title="Annual Music Concert"
+                  category="Arts & Culture"
+                  image="https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+               />
+            </div>
+
+            {/* Testimonials */}
+            <h3 className="font-display font-bold text-2xl text-gray-800 mb-8 text-center">What People Say</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                <TestimonialCard 
                   quote="Mwangaza has completely eliminated our paperwork. The CBC reports are generated instantly!"
@@ -556,6 +624,53 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
                   author="Tr. Sarah"
                   role="Senior Teacher"
                />
+            </div>
+         </div>
+      </section>
+
+      {/* ABOUT SECTION (New) */}
+      <section id="about" className="py-24 bg-brand-grey/50 relative overflow-hidden">
+         {/* Decor */}
+         <div className="absolute -left-20 top-20 w-96 h-96 bg-brand-blue/5 rounded-full blur-3xl"></div>
+
+         <div className="max-w-7xl mx-auto px-6 relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+               <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-500 text-xs font-bold shadow-sm mb-6">
+                     <Home size={14} /> Established 2010
+                  </div>
+                  <h2 className="font-display font-extrabold text-4xl text-gray-900 mb-6">Empowering the Leaders of Tomorrow</h2>
+                  <p className="text-gray-600 text-lg leading-relaxed mb-6">
+                     Mwangaza was founded with a simple mission: to bridge the gap between traditional education and the digital future. We believe in holistic learning that respects the Kenyan competency-based curriculum while leveraging cutting-edge technology.
+                  </p>
+                  <p className="text-gray-600 text-lg leading-relaxed mb-8">
+                     Our campus in Westlands is a hub of innovation, creativity, and academic excellence, fostering a safe environment for over 500 students.
+                  </p>
+                  
+                  <div className="grid grid-cols-2 gap-6">
+                     <div>
+                        <h4 className="font-bold text-3xl text-brand-blue mb-1">15+</h4>
+                        <p className="text-sm text-gray-500">Years of Excellence</p>
+                     </div>
+                     <div>
+                        <h4 className="font-bold text-3xl text-brand-green mb-1">40+</h4>
+                        <p className="text-sm text-gray-500">Certified Teachers</p>
+                     </div>
+                  </div>
+               </div>
+
+               {/* Team Grid */}
+               <div>
+                  <div className="bg-white p-8 rounded-[24px] shadow-xl border border-gray-100">
+                     <h3 className="font-display font-bold text-xl text-center mb-8">Meet Our Leadership</h3>
+                     <div className="grid grid-cols-2 gap-y-8 gap-x-4">
+                        <TeamCard name="Mrs. J. Omondi" role="Principal" img="https://ui-avatars.com/api/?name=Jane+Omondi&background=1E3A8A&color=fff" />
+                        <TeamCard name="Mr. K. Njoroge" role="Dep. Academics" img="https://ui-avatars.com/api/?name=Kamau+Njoroge&background=059669&color=fff" />
+                        <TeamCard name="Tr. Sarah" role="Head of Sciences" img="https://ui-avatars.com/api/?name=Sarah+M&background=FCD34D&color=fff" />
+                        <TeamCard name="Dr. A. Hassan" role="Board Chair" img="https://ui-avatars.com/api/?name=Ali+Hassan&background=EF4444&color=fff" />
+                     </div>
+                  </div>
+               </div>
             </div>
          </div>
       </section>
@@ -625,8 +740,49 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
          </div>
       </footer>
 
+      {/* Dev Login Widget */}
+      {onDevLogin && (
+        <div className="fixed bottom-4 right-4 z-50 bg-gray-100/90 backdrop-blur border border-gray-300 rounded-lg shadow-xl p-3 animate-fade-in max-w-xs">
+           <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-300">
+              <Terminal size={14} className="text-gray-500"/>
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Dev Access Only</span>
+           </div>
+           <div className="grid grid-cols-2 gap-2">
+              <button 
+                onClick={() => onDevLogin(UserRole.ADMIN)}
+                className="px-3 py-2 bg-white hover:bg-brand-blue hover:text-white text-xs font-bold text-brand-blue rounded border border-gray-200 transition-colors"
+              >
+                Admin
+              </button>
+              <button 
+                onClick={() => onDevLogin(UserRole.PRINCIPAL)}
+                className="px-3 py-2 bg-white hover:bg-brand-blue hover:text-white text-xs font-bold text-brand-blue rounded border border-gray-200 transition-colors"
+              >
+                Principal
+              </button>
+              <button 
+                onClick={() => onDevLogin(UserRole.TEACHER)}
+                className="px-3 py-2 bg-white hover:bg-brand-blue hover:text-white text-xs font-bold text-brand-blue rounded border border-gray-200 transition-colors"
+              >
+                Teacher
+              </button>
+              <button 
+                onClick={() => onDevLogin(UserRole.PARENT)}
+                className="px-3 py-2 bg-white hover:bg-brand-blue hover:text-white text-xs font-bold text-brand-blue rounded border border-gray-200 transition-colors"
+              >
+                Parent
+              </button>
+           </div>
+        </div>
+      )}
+
       {/* Modals */}
-      <LoginSelectionModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onSelect={onLoginSelect} />
+      <LoginSelectionModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)} 
+        onSelect={onLoginSelect} 
+        onSignup={onSignupSelect}
+      />
       <LeadCaptureModal isOpen={showLeadModal} onClose={() => setShowLeadModal(false)} />
     </div>
   );

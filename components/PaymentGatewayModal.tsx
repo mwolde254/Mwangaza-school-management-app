@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { X, Smartphone, CreditCard, Landmark, Lock, Loader2, CheckCircle2, AlertCircle, ShieldCheck, ChevronRight, UploadCloud } from 'lucide-react';
 import { useStudentData } from '../context/StudentDataContext';
@@ -65,14 +64,7 @@ const PaymentGatewayModal: React.FC<PaymentGatewayModalProps> = ({
 
     try {
       // Mock Validation
-      if (method === 'MPESA') {
-          // Basic Kenyan Phone Validation (starts with 07, 01, +254, 254)
-          const phoneRegex = /^(?:254|\+254|0)?(7|1)\d{8}$/;
-          if (!phoneRegex.test(mpesaNumber.replace(/\s+/g, ''))) {
-              throw new Error("Invalid M-Pesa number format.");
-          }
-      }
-      
+      if (method === 'MPESA' && mpesaNumber.length < 10) throw new Error("Invalid phone number.");
       if (method === 'CARD' && cardNumber.length < 12) throw new Error("Invalid card number.");
       if (method === 'BANK' && bankRef.length < 5) throw new Error("Invalid reference code.");
 

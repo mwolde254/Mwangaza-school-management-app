@@ -123,10 +123,10 @@ const MOCK_DATA_HEALTH: SystemHealth = {
 };
 
 const MOCK_STUDENTS: Student[] = [
-  { id: 'st1', name: 'Zuri Kamau', grade: 'Grade 4', admissionNumber: 'ADM-2023-001', parentName: 'David Kamau', contactPhone: '0712345678', contactEmail: 'david@kamau.com', balance: 15000, avatarUrl: 'https://picsum.photos/100/100?random=1', transportRouteId: 'tr1', totalPoints: 150 },
-  { id: 'st2', name: 'Jabari Ochieng', grade: 'Grade 4', admissionNumber: 'ADM-2023-002', parentName: 'Grace Ochieng', contactPhone: '0722345678', contactEmail: 'grace@ochieng.com', balance: 0, avatarUrl: 'https://picsum.photos/100/100?random=2', transportRouteId: 'tr2', totalPoints: 85 },
-  { id: 'st3', name: 'Nia Wanjiku', grade: 'Grade 5', admissionNumber: 'ADM-2023-003', parentName: 'Esther Wanjiku', contactPhone: '0733345678', contactEmail: 'esther@wanjiku.com', balance: 4500, avatarUrl: 'https://picsum.photos/100/100?random=3', totalPoints: 200 },
-  { id: 'st4', name: 'Kofi Abdi', grade: 'Grade 4', admissionNumber: 'ADM-2023-004', parentName: 'Mohammed Abdi', contactPhone: '0744345678', contactEmail: 'mohammed@abdi.com', balance: 22000, avatarUrl: 'https://picsum.photos/100/100?random=4', totalPoints: 120 },
+  { id: 'st1', name: 'Zuri Kamau', grade: 'Grade 4', admissionNumber: 'ADM-2023-001', parentName: 'David Kamau', contactPhone: '0712345678', contactEmail: 'david@kamau.com', balance: 15000, avatarUrl: 'https://images.unsplash.com/photo-1605335957384-90f772ba9e97?fit=crop&w=150&h=150', transportRouteId: 'tr1', totalPoints: 150 },
+  { id: 'st2', name: 'Jabari Ochieng', grade: 'Grade 4', admissionNumber: 'ADM-2023-002', parentName: 'Grace Ochieng', contactPhone: '0722345678', contactEmail: 'grace@ochieng.com', balance: 0, avatarUrl: 'https://images.unsplash.com/photo-1522923970799-7365fc7a0914?fit=crop&w=150&h=150', transportRouteId: 'tr2', totalPoints: 85 },
+  { id: 'st3', name: 'Nia Wanjiku', grade: 'Grade 5', admissionNumber: 'ADM-2023-003', parentName: 'Esther Wanjiku', contactPhone: '0733345678', contactEmail: 'esther@wanjiku.com', balance: 4500, avatarUrl: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?fit=crop&w=150&h=150', totalPoints: 200 },
+  { id: 'st4', name: 'Kofi Abdi', grade: 'Grade 4', admissionNumber: 'ADM-2023-004', parentName: 'Mohammed Abdi', contactPhone: '0744345678', contactEmail: 'mohammed@abdi.com', balance: 22000, avatarUrl: 'https://images.unsplash.com/photo-1519163276532-349f706346bc?fit=crop&w=150&h=150', totalPoints: 120 },
 ];
 
 const MOCK_POINTS: PointLog[] = [
@@ -354,6 +354,7 @@ export const db = {
       if (path === 'transport_logs') return getCollection<TransportLog>('transport_logs', MOCK_TRANSPORT_LOGS);
       if (path === 'staff') return getCollection<StaffRecord>('staff', MOCK_STAFF);
       if (path === 'points') return getCollection<PointLog>('points', MOCK_POINTS);
+      if (path === 'invites') return getCollection('invites', []); // Ensure invites collection exists
       return [];
     },
     // Special getter for single config docs
@@ -363,7 +364,8 @@ export const db = {
     },
     add: async (data: any) => {
       await new Promise(r => setTimeout(r, DELAY));
-      const collectionKey = path === 'invites' ? 'users' : path;
+      // Removed redirection logic to prevent duplicate user creation when adding invites
+      const collectionKey = path;
       
       const defaultData = path === 'students' ? MOCK_STUDENTS : 
                           path === 'users' ? MOCK_USERS : 
@@ -383,7 +385,8 @@ export const db = {
                           path === 'transport_vehicles' ? MOCK_TRANSPORT_VEHICLES :
                           path === 'transport_logs' ? MOCK_TRANSPORT_LOGS : 
                           path === 'staff' ? MOCK_STAFF : 
-                          path === 'points' ? MOCK_POINTS : [];
+                          path === 'points' ? MOCK_POINTS : 
+                          path === 'invites' ? [] : [];
 
       const list = getCollection(collectionKey, defaultData as any[]);
       

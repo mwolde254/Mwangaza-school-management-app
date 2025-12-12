@@ -12,17 +12,6 @@ export interface LeaveBalance {
   compassionate: { total: number; used: number };
 }
 
-export interface UserPreferences {
-  theme?: 'LIGHT' | 'DARK' | 'SYSTEM';
-  language?: string;
-  currency?: string;
-  timezone?: string;
-  notifications?: any; // Structured notification config
-  adminFinance?: { apiKey?: string; apiSecret?: string; provider?: string };
-  teacherDefaultClass?: string;
-  parentFeeThreshold?: number;
-}
-
 export interface UserProfile {
   id: string;
   name: string;
@@ -33,8 +22,7 @@ export interface UserProfile {
   phoneNumber?: string;
   linkedStudentIds?: string[]; // For parents
   leaveBalances?: LeaveBalance; // New for staff
-  totalPoints?: number; // Gamification Score
-  preferences?: UserPreferences;
+  totalPoints?: number;
 }
 
 // --- HR & STAFF TYPES ---
@@ -81,7 +69,7 @@ export interface Student {
   balance: number;
   avatarUrl: string;
   transportRouteId?: string; // Linked transport route
-  totalPoints: number; // Gamification Score
+  totalPoints?: number;
 }
 
 export interface StudentNote {
@@ -304,13 +292,12 @@ export interface TransportLog {
   delayMinutes?: number;
 }
 
-// --- GAMIFICATION / REWARDS TYPES ---
 export interface PointLog {
   id: string;
-  userId: string; // Student ID or Teacher User ID
-  role: 'STUDENT' | 'TEACHER';
+  userId: string;
+  role: string;
   points: number;
   reason: string;
   date: string;
-  awardedBy: string; // User ID
+  awardedBy: string;
 }
