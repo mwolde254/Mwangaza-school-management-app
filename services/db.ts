@@ -197,8 +197,62 @@ const MOCK_TIMETABLE: TimetableSlot[] = [
 ];
 
 const MOCK_TICKETS: SupportTicket[] = [
-  { id: 'tk1', parentId: 'u3', parentName: 'David Kamau', studentId: 'st1', studentName: 'Zuri Kamau', category: 'FEES', subject: 'Clarification on Trip Cost', message: 'Hi, does the science trip cost cover lunch as well?', status: 'RESOLVED', date: '2023-10-20T10:00:00Z', adminResponse: 'Yes, Mr. Kamau. Lunch and transport are included.', resolvedAt: '2023-10-20T14:00:00Z', resolvedBy: 'Bursar' },
-  { id: 'tk2', parentId: 'u3', parentName: 'David Kamau', category: 'ACADEMIC', subject: 'Report Card access', message: 'I cannot download the Term 2 report card.', status: 'OPEN', date: '2023-10-25T08:30:00Z' }
+  { 
+    id: 'tk1', 
+    source: 'PARENT',
+    requestorId: 'u3', 
+    requestorName: 'David Kamau', 
+    requestorRole: UserRole.PARENT,
+    studentId: 'st1', 
+    studentName: 'Zuri Kamau', 
+    category: 'FEES', 
+    subject: 'Clarification on Trip Cost', 
+    status: 'RESOLVED',
+    priority: 'NORMAL',
+    createdAt: '2023-10-20T10:00:00Z', 
+    updatedAt: '2023-10-20T14:00:00Z',
+    messages: [
+      {
+        id: 'msg1',
+        senderId: 'u3',
+        senderName: 'David Kamau',
+        role: UserRole.PARENT,
+        message: 'Hi, does the science trip cost cover lunch as well?',
+        timestamp: '2023-10-20T10:00:00Z'
+      },
+      {
+        id: 'msg2',
+        senderId: 'u1',
+        senderName: 'Bursar',
+        role: UserRole.ADMIN,
+        message: 'Yes, Mr. Kamau. Lunch and transport are included.',
+        timestamp: '2023-10-20T14:00:00Z'
+      }
+    ]
+  },
+  { 
+    id: 'tk2', 
+    source: 'PARENT',
+    requestorId: 'u3', 
+    requestorName: 'David Kamau', 
+    requestorRole: UserRole.PARENT,
+    category: 'ACADEMIC', 
+    subject: 'Report Card access', 
+    status: 'OPEN', 
+    priority: 'HIGH',
+    createdAt: '2023-10-25T08:30:00Z',
+    updatedAt: '2023-10-25T08:30:00Z',
+    messages: [
+      {
+        id: 'msg3',
+        senderId: 'u3',
+        senderName: 'David Kamau',
+        role: UserRole.PARENT,
+        message: 'I cannot download the Term 2 report card.',
+        timestamp: '2023-10-25T08:30:00Z'
+      }
+    ]
+  }
 ];
 
 const MOCK_APPLICATIONS: AdmissionApplication[] = [

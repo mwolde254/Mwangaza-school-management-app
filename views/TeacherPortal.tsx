@@ -2,16 +2,20 @@
 import React, { useState, useMemo } from 'react';
 import { useStudentData } from '../context/StudentDataContext';
 import { useAuth } from '../context/AuthContext';
-import { AttendanceStatus, AttendanceRecord, Competency, LeaveType } from '../types';
+import { AttendanceStatus, AttendanceRecord, Competency, LeaveType, TicketPriority, TicketCategory, UserRole } from '../types';
 import { format, isSameDay, addDays, differenceInBusinessDays, parseISO } from 'date-fns';
-import { Check, Clock, X, Save, Edit3, Award, Plus, AlertCircle, ChevronDown, ArrowLeft, Send, BookOpen, Users, ArrowRight, Calendar, Loader2, Briefcase, Stethoscope, Palmtree, Heart, Table, GraduationCap } from 'lucide-react';
+import { Check, Clock, X, Save, Edit3, Award, Plus, AlertCircle, ChevronDown, ArrowLeft, Send, BookOpen, Users, ArrowRight, Calendar, Loader2, Briefcase, Stethoscope, Palmtree, Heart, Table, GraduationCap, HelpCircle, MapPin, UploadCloud, MessageCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 import TimetableModule from '../components/TimetableModule';
+import MultiSubjectAssessmentModal from '../components/MultiSubjectAssessmentModal';
+
+// Mock Subject List for Demo
+const SUBJECTS_LIST = ['Mathematics', 'English', 'Kiswahili', 'Science', 'Social Studies'];
 
 const TeacherPortal: React.FC = () => {
-  const { students, submitAttendance, assessments, addAssessment, updateAssessment, attendance, competencies, addStudent, events, leaveRequests, submitLeaveRequest, users } = useStudentData(); 
+  const { students, submitAttendance, assessments, addAssessment, batchAddAssessments, attendance, competencies, addStudent, events, leaveRequests, submitLeaveRequest, users, addSupportTicket, supportTickets } = useStudentData(); 
   const { user } = useAuth();
-  const [mode, setMode] = useState<'DASHBOARD' | 'ATTENDANCE' | 'ASSESSMENT' | 'COMPETENCY' | 'LEAVE' | 'TIMETABLE'>('DASHBOARD');
+  const [mode, setMode] = useState<'DASHBOARD' | 'ATTENDANCE' | 'ASSESSMENT' | 'COMPETENCY' | 'LEAVE' | 'TIMETABLE' | 'SUPPORT'>('DASHBOARD');
   
   // -- CLASS CONTEXT SWITCHER --
   const myClasses = [
@@ -71,6 +75,15 @@ const TeacherPortal: React.FC = () => {
 
   const myLeaveRequests = leaveRequests.filter(req => req.staffId === user?.id).sort((a,b) => new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime());
   
+  // -- SUPPORT STATE --
+  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [ticketCategory, setTicketCategory] = useState<TicketCategory>('IT_SUPPORT');
+  const [ticketUrgency, setTicketUrgency] = useState<TicketPriority>('NORMAL');
+  const [ticketDesc, setTicketDesc] = useState('');
+  const [ticketLocation, setTicketLocation] = useState('');
+  
+  const myTickets = supportTickets.filter(t => t.requestorId === user?.id).sort((a,b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
   // Balances (Mocked logic if user balances are missing)
   const balances = user?.leaveBalances || { annual: { total: 21, used: 0 }, sick: { total: 14, used: 0 }, compassionate: { total: 7, used: 0 } };
 
@@ -171,6 +184,45 @@ const TeacherPortal: React.FC = () => {
     }
   };
 
+  const handleSubmitTicket = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!user || !ticketDesc) return;
+      setSaving(true);
+      
+      try {
+          await addSupportTicket({
+              source: 'STAFF',
+              requestorId: user.id,
+              requestorName: user.name,
+              requestorRole: UserRole.TEACHER,
+              category: ticketCategory,
+              priority: ticketUrgency,
+              subject: `${ticketCategory} Issue at ${ticketLocation || 'My Desk'}`,
+              status: 'OPEN',
+              location: ticketLocation,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              messages: [
+                  {
+                      id: `msg_${Date.now()}`,
+                      senderId: user.id,
+                      senderName: user.name,
+                      role: UserRole.TEACHER,
+                      message: ticketDesc,
+                      timestamp: new Date().toISOString()
+                  }
+              ]
+          });
+          showNotification("Issue reported successfully.", "success");
+          setShowSupportModal(false);
+          setTicketDesc(''); setTicketLocation('');
+      } catch (e) {
+          showNotification("Failed to create ticket.", "error");
+      } finally {
+          setSaving(false);
+      }
+  };
+
   const getStatusCount = (status: AttendanceStatus) => {
       return students.filter(s => {
           const sState = attendanceState[s.id] || { status: AttendanceStatus.PRESENT };
@@ -179,20 +231,16 @@ const TeacherPortal: React.FC = () => {
   };
 
   const [showModal, setShowModal] = useState(false);
+  const [showMultiSubjectModal, setShowMultiSubjectModal] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
-  const [mathScore, setMathScore] = useState(0);
-  const [englishScore, setEnglishScore] = useState(0);
+  
+  // Competency State
   const [competencyStrand, setCompetencyStrand] = useState('');
   const [competencyRating, setCompetencyRating] = useState('Meeting Expectation');
 
   const openAssessment = (studentId: string) => {
     setSelectedStudentId(studentId);
-    const studentAssessments = assessments.filter(a => a.studentId === studentId);
-    const math = studentAssessments.find(a => a.subject === 'Mathematics');
-    const english = studentAssessments.find(a => a.subject === 'English');
-    setMathScore(math ? math.score : 0);
-    setEnglishScore(english ? english.score : 0);
-    setShowModal(true);
+    setShowMultiSubjectModal(true);
   };
 
   const openCompetency = (studentId: string) => {
@@ -202,13 +250,9 @@ const TeacherPortal: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleSaveAssessment = async () => {
-    if (!selectedStudentId) return;
-    setSaving(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setSaving(false);
-    setShowModal(false);
-    showNotification("Assessment marks updated!", "success");
+  const handleSaveMultiAssessment = async (newAssessments: any[]) => {
+    await batchAddAssessments(newAssessments);
+    showNotification(`Recorded grades for ${newAssessments.length} subjects!`, "success");
   };
 
   const handleSaveCompetency = async () => {
@@ -278,12 +322,12 @@ const TeacherPortal: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-display font-bold text-brand-blue">
-            {mode === 'DASHBOARD' ? `Welcome, ${user?.name || 'Teacher'}` : mode === 'ATTENDANCE' ? 'Take Attendance' : mode === 'ASSESSMENT' ? 'Record Assessment' : mode === 'LEAVE' ? 'My Leave' : mode === 'TIMETABLE' ? 'My Schedule' : 'Add Competency'}
+            {mode === 'DASHBOARD' ? `Welcome, ${user?.name || 'Teacher'}` : mode === 'ATTENDANCE' ? 'Take Attendance' : mode === 'ASSESSMENT' ? 'Record Assessment' : mode === 'LEAVE' ? 'My Leave' : mode === 'TIMETABLE' ? 'My Schedule' : mode === 'SUPPORT' ? 'Internal Support' : 'Add Competency'}
           </h1>
-          <p className="text-gray-500 text-sm">{mode === 'DASHBOARD' ? 'Here is your class overview for today.' : mode === 'LEAVE' ? 'Manage your time off.' : mode === 'TIMETABLE' ? 'View your weekly lessons.' : 'Manage student records efficiently.'}</p>
+          <p className="text-gray-500 text-sm">{mode === 'DASHBOARD' ? 'Here is your class overview for today.' : mode === 'LEAVE' ? 'Manage your time off.' : mode === 'TIMETABLE' ? 'View your weekly lessons.' : mode === 'SUPPORT' ? 'Report facilities or IT issues.' : 'Manage student records efficiently.'}</p>
         </div>
         
-        {mode !== 'LEAVE' && mode !== 'TIMETABLE' && (
+        {mode !== 'LEAVE' && mode !== 'TIMETABLE' && mode !== 'SUPPORT' && (
             <div className="relative group z-30">
                 <label className="absolute -top-2 left-3 bg-brand-grey px-1 text-[10px] font-bold text-gray-500 uppercase z-10">Currently Teaching</label>
                 <div className="relative">
@@ -356,6 +400,13 @@ const TeacherPortal: React.FC = () => {
         >
           <Briefcase size={18} /> My Leave
         </button>
+
+        <button 
+          onClick={() => setMode('SUPPORT')}
+          className={`flex-1 md:flex-none px-6 h-12 flex items-center justify-center gap-2 ${mode === 'SUPPORT' ? 'bg-brand-red/10 text-brand-red border border-brand-red' : 'border border-gray-200 text-gray-600 hover:bg-brand-red/5'} ${btnBase}`}
+        >
+          <HelpCircle size={18} /> Help Desk
+        </button>
       </div>
 
       {/* --- DASHBOARD VIEW --- */}
@@ -392,7 +443,7 @@ const TeacherPortal: React.FC = () => {
                            <span className="text-xs font-bold text-gray-600">08:00</span>
                            <div>
                               <p className="text-sm font-bold text-gray-800">{selectedClass.name}</p>
-                              <p className="text-[10px] text-gray-500">Regular Session</p>
+                              <p className="text-xs text-gray-500">Regular Session</p>
                            </div>
                         </div>
                      </div>
@@ -744,76 +795,112 @@ const TeacherPortal: React.FC = () => {
         </div>
       )}
 
+      {/* --- INTERNAL SUPPORT VIEW --- */}
+      {mode === 'SUPPORT' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-up">
+              <div className={cardBase}>
+                  <div className="flex justify-between items-center mb-6">
+                      <h3 className="font-display font-bold text-lg text-gray-800 flex items-center gap-2">
+                          <AlertCircle size={20}/> My Tickets
+                      </h3>
+                      <button 
+                          onClick={() => setShowSupportModal(true)}
+                          className="text-xs font-bold bg-brand-blue text-white px-3 py-1.5 rounded hover:bg-brand-blue/90"
+                      >
+                          Report Issue
+                      </button>
+                  </div>
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                      {myTickets.length > 0 ? myTickets.map(t => (
+                          <div key={t.id} className="p-3 border border-gray-100 rounded-lg bg-gray-50 flex justify-between items-center">
+                              <div>
+                                  <h4 className="font-bold text-sm text-gray-800">{t.subject}</h4>
+                                  <p className="text-xs text-gray-500 mt-1">{t.category} • {format(new Date(t.createdAt), 'dd MMM')}</p>
+                              </div>
+                              <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
+                                  t.status === 'RESOLVED' ? 'bg-brand-green/10 text-brand-green' :
+                                  t.status === 'IN_PROGRESS' ? 'bg-brand-sky/10 text-brand-sky' :
+                                  'bg-brand-yellow/10 text-brand-yellow-600'
+                              }`}>
+                                  {t.status.replace('_', ' ')}
+                              </span>
+                          </div>
+                      )) : (
+                          <p className="text-center text-gray-400 py-8 text-sm italic">No tickets reported.</p>
+                      )}
+                  </div>
+              </div>
+
+              <div className="bg-brand-blue/5 border border-brand-blue/10 rounded-xl p-6 flex flex-col items-center justify-center text-center">
+                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-brand-blue mb-4 shadow-sm">
+                      <MessageCircle size={32}/>
+                  </div>
+                  <h3 className="font-display font-bold text-xl text-brand-blue mb-2">Need Help?</h3>
+                  <p className="text-sm text-gray-600 max-w-sm mb-6">
+                      Report IT issues, maintenance requests, or HR inquiries directly to the administration. We track every ticket to ensure quick resolution.
+                  </p>
+                  <button 
+                      onClick={() => setShowSupportModal(true)}
+                      className="px-8 h-12 bg-brand-blue text-white font-bold rounded-xl shadow-lg hover:bg-brand-blue/90 transition-all flex items-center gap-2"
+                  >
+                      <Plus size={20}/> Open New Ticket
+                  </button>
+              </div>
+          </div>
+      )}
+
       {/* --- MODALS --- */}
+      {showMultiSubjectModal && selectedStudent && (
+          <MultiSubjectAssessmentModal
+            student={selectedStudent}
+            subjects={SUBJECTS_LIST}
+            onClose={() => setShowMultiSubjectModal(false)}
+            onSave={handleSaveMultiAssessment}
+          />
+      )}
+
       {showModal && selectedStudent && (
         <div className="fixed inset-0 bg-brand-blue/20 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl relative animate-slide-up border border-gray-100">
              <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-sky/50 rounded-full p-1"><X size={20}/></button>
              
-             <h3 className="text-xl font-display font-bold mb-1">{mode === 'ASSESSMENT' ? 'Update Assessment' : 'New Competency'}</h3>
+             <h3 className="text-xl font-display font-bold mb-1">New Competency</h3>
              <p className="text-sm text-gray-500 mb-6">For student <span className="font-bold text-brand-blue">{selectedStudent.name}</span></p>
              
-             {mode === 'ASSESSMENT' ? (
-               <div className="space-y-4">
-                 <div>
-                   <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Mathematics (Score / 100)</label>
-                   <input 
-                     type="number" 
-                     value={mathScore}
-                     onChange={(e) => setMathScore(parseInt(e.target.value) || 0)}
-                     className="w-full h-12 px-4 rounded-lg border border-gray-200 focus:border-brand-sky focus:ring-2 focus:ring-brand-sky/20 outline-none transition-all font-medium text-gray-700"
-                     placeholder="0-100" 
-                     max={100}
-                   />
-                 </div>
-                 <div>
-                   <label className="block text-xs font-bold text-gray-500 uppercase mb-2">English (Score / 100)</label>
-                   <input 
-                     type="number" 
-                     value={englishScore}
-                     onChange={(e) => setEnglishScore(parseInt(e.target.value) || 0)}
-                     className="w-full h-12 px-4 rounded-lg border border-gray-200 focus:border-brand-sky focus:ring-2 focus:ring-brand-sky/20 outline-none transition-all font-medium text-gray-700"
-                     placeholder="0-100" 
-                     max={100}
-                   />
-                 </div>
-               </div>
-             ) : (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Competency Strand</label>
-                    <select 
-                      value={competencyStrand}
-                      onChange={(e) => setCompetencyStrand(e.target.value)}
-                      className="w-full h-12 px-4 rounded-lg border border-gray-200 focus:border-brand-sky focus:ring-2 focus:ring-brand-sky/20 outline-none transition-all font-medium text-gray-700 bg-white"
-                    >
-                      <option value="Numbers & Operations">Numbers & Operations</option>
-                      <option value="Geometry">Geometry</option>
-                      <option value="Measurement">Measurement</option>
-                      <option value="Data Handling">Data Handling</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Proficiency Level</label>
-                    <div className="space-y-2">
-                       {['Emerging', 'Developing', 'Meeting Expectation', 'Exceeding'].map(lvl => (
-                         <div 
-                           key={lvl}
-                           onClick={() => setCompetencyRating(lvl)}
-                           className={`p-3 rounded-lg border cursor-pointer flex items-center justify-between transition-all ${competencyRating === lvl ? 'bg-brand-blue/5 border-brand-blue ring-1 ring-brand-blue' : 'bg-white border-gray-200 hover:border-brand-sky/50'}`}
-                         >
-                           <span className={`text-sm font-bold ${competencyRating === lvl ? 'text-brand-blue' : 'text-gray-600'}`}>{lvl}</span>
-                           {competencyRating === lvl && <Check size={16} className="text-brand-blue"/>}
-                         </div>
-                       ))}
-                    </div>
-                  </div>
+             <div className="space-y-4">
+                <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Competency Strand</label>
+                <select 
+                    value={competencyStrand}
+                    onChange={(e) => setCompetencyStrand(e.target.value)}
+                    className="w-full h-12 px-4 rounded-lg border border-gray-200 focus:border-brand-sky focus:ring-2 focus:ring-brand-sky/20 outline-none transition-all font-medium text-gray-700 bg-white"
+                >
+                    <option value="Numbers & Operations">Numbers & Operations</option>
+                    <option value="Geometry">Geometry</option>
+                    <option value="Measurement">Measurement</option>
+                    <option value="Data Handling">Data Handling</option>
+                </select>
                 </div>
-             )}
+                <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Proficiency Level</label>
+                <div className="space-y-2">
+                    {['Emerging', 'Developing', 'Meeting Expectation', 'Exceeding'].map(lvl => (
+                        <div 
+                        key={lvl}
+                        onClick={() => setCompetencyRating(lvl)}
+                        className={`p-3 rounded-lg border cursor-pointer flex items-center justify-between transition-all ${competencyRating === lvl ? 'bg-brand-blue/5 border-brand-blue ring-1 ring-brand-blue' : 'bg-white border-gray-200 hover:border-brand-sky/50'}`}
+                        >
+                        <span className={`text-sm font-bold ${competencyRating === lvl ? 'text-brand-blue' : 'text-gray-600'}`}>{lvl}</span>
+                        {competencyRating === lvl && <Check size={16} className="text-brand-blue"/>}
+                        </div>
+                    ))}
+                </div>
+                </div>
+            </div>
 
              <div className="pt-6">
                 <button 
-                  onClick={mode === 'ASSESSMENT' ? handleSaveAssessment : handleSaveCompetency}
+                  onClick={handleSaveCompetency}
                   disabled={saving}
                   className={`w-full h-12 bg-brand-blue text-white ${btnBase} shadow-lg shadow-brand-blue/20 hover:bg-brand-blue/90 flex items-center justify-center gap-2`}
                 >
@@ -882,6 +969,83 @@ const TeacherPortal: React.FC = () => {
               </form>
            </div>
         </div>
+      )}
+
+      {/* SUPPORT TICKET MODAL */}
+      {showSupportModal && (
+          <div className="fixed inset-0 bg-brand-blue/20 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+              <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl relative animate-slide-up border border-gray-100">
+                  <button onClick={() => setShowSupportModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 rounded-full p-1"><X size={20}/></button>
+                  <h3 className="text-xl font-display font-bold mb-1 text-brand-blue">Report Issue</h3>
+                  <p className="text-sm text-gray-500 mb-6">Internal help desk for staff & teachers.</p>
+
+                  <form onSubmit={handleSubmitTicket} className="space-y-4">
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Category</label>
+                          <select 
+                              value={ticketCategory}
+                              onChange={(e) => setTicketCategory(e.target.value as any)}
+                              className={inputClass}
+                          >
+                              <option value="IT_SUPPORT">IT Support</option>
+                              <option value="MAINTENANCE">Facilities / Maintenance</option>
+                              <option value="HR">HR / Payroll</option>
+                              <option value="ACADEMIC">Academic Resources</option>
+                              <option value="OTHER">Other</option>
+                          </select>
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Urgency</label>
+                          <div className="flex bg-gray-100 p-1 rounded-lg">
+                              {['NORMAL', 'HIGH', 'CRITICAL'].map((p) => (
+                                  <button
+                                      type="button"
+                                      key={p}
+                                      onClick={() => setTicketUrgency(p as any)}
+                                      className={`flex-1 py-2 text-xs font-bold rounded transition-all ${ticketUrgency === p ? 'bg-white shadow text-brand-blue' : 'text-gray-500'}`}
+                                  >
+                                      {p}
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Location (Optional)</label>
+                          <div className="relative">
+                              <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
+                              <input 
+                                  type="text" 
+                                  value={ticketLocation}
+                                  onChange={(e) => setTicketLocation(e.target.value)}
+                                  className={`${inputClass} pl-10`}
+                                  placeholder="e.g. Lab 1, Staffroom"
+                              />
+                          </div>
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Description</label>
+                          <textarea 
+                              value={ticketDesc}
+                              onChange={(e) => setTicketDesc(e.target.value)}
+                              className="w-full h-24 p-3 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-brand-sky/20 outline-none"
+                              placeholder="Describe the issue in detail..."
+                              required
+                          />
+                      </div>
+                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 flex flex-col items-center justify-center text-center text-gray-400 cursor-pointer hover:border-brand-blue hover:bg-brand-blue/5 transition-all">
+                          <UploadCloud size={24} className="mb-1"/>
+                          <span className="text-xs">Attach Photo (Optional)</span>
+                      </div>
+                      <button 
+                          type="submit" 
+                          disabled={saving}
+                          className={`w-full h-12 bg-brand-blue text-white ${btnBase} shadow-lg shadow-brand-blue/20 hover:bg-brand-blue/90 flex items-center justify-center gap-2`}
+                      >
+                          {saving ? <Loader2 className="animate-spin" size={20}/> : 'Submit Ticket'}
+                      </button>
+                  </form>
+              </div>
+          </div>
       )}
     </div>
   );

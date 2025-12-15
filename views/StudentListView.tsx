@@ -1,16 +1,19 @@
+
 import React, { useState } from 'react';
 import { useStudentData } from '../context/StudentDataContext';
 import { useAuth } from '../context/AuthContext';
 import { UserRole, AttendanceStatus, Student } from '../types';
-import { Search, Filter, Plus, User, ArrowRight, BookOpen, AlertCircle, CheckCircle2, Wallet, Calendar, CreditCard, ChevronRight, X, Loader2, Check } from 'lucide-react';
+import { Search, Filter, Plus, User, ArrowRight, BookOpen, AlertCircle, CheckCircle2, Wallet, Calendar, CreditCard, ChevronRight, X, Loader2, Check, UploadCloud } from 'lucide-react';
 import PaymentGatewayModal from '../components/PaymentGatewayModal';
+import StudentRegistrationWizard from '../components/StudentRegistrationWizard';
+import BulkStudentImport from '../components/BulkStudentImport';
 
 interface StudentListViewProps {
   onSelectStudent: (studentId: string) => void;
 }
 
 const StudentListView: React.FC<StudentListViewProps> = ({ onSelectStudent }) => {
-  const { students, attendance, addStudent } = useStudentData();
+  const { students, attendance } = useStudentData();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [gradeFilter, setGradeFilter] = useState('ALL');
@@ -19,17 +22,10 @@ const StudentListView: React.FC<StudentListViewProps> = ({ onSelectStudent }) =>
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPaymentStudent, setSelectedPaymentStudent] = useState<Student | null>(null);
 
-  // Add Student State
-  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
-  const [newStudent, setNewStudent] = useState({
-    name: '',
-    grade: '',
-    admissionNumber: '',
-    parentName: '',
-    contactPhone: '',
-    contactEmail: ''
-  });
+  // New Student State
+  const [showWizard, setShowWizard] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   // Role-based filtering
   const visibleStudents = students.filter(student => {
@@ -70,30 +66,27 @@ const StudentListView: React.FC<StudentListViewProps> = ({ onSelectStudent }) =>
     setShowPaymentModal(true);
   };
 
-  const handleAddStudentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsAdding(true);
-    try {
-      await addStudent({
-        ...newStudent,
-        balance: 0,
-        avatarUrl: `https://ui-avatars.com/api/?name=${newStudent.name}&background=random`
-      });
-      setShowAddStudentModal(false);
-      setNewStudent({ name: '', grade: '', admissionNumber: '', parentName: '', contactPhone: '', contactEmail: '' });
-    } catch (error) {
-      console.error("Failed to add student");
-    } finally {
-      setIsAdding(false);
-    }
+  const handleRegistrationSuccess = () => {
+      setToast('Student registered successfully.');
+      setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleImportSuccess = () => {
+      setToast('Bulk import completed.');
+      setTimeout(() => setToast(null), 3000);
   };
 
   const inputClass = "h-12 px-4 rounded-[12px] border border-gray-200 focus:border-brand-sky focus:ring-2 focus:ring-brand-sky/20 outline-none transition-all font-sans text-gray-700 bg-white";
-  const modalInputClass = "w-full h-12 px-4 rounded-lg border border-gray-200 focus:border-brand-sky focus:ring-2 focus:ring-brand-sky/20 outline-none transition-all font-medium text-gray-700";
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-fade-in pb-12 relative">
       
+      {toast && (
+        <div className="fixed top-20 right-8 z-50 px-6 py-4 bg-brand-green text-white rounded-xl shadow-xl flex items-center gap-3 animate-slide-up">
+           <Check size={20}/> <span className="font-bold text-sm">{toast}</span>
+        </div>
+      )}
+
       {/* Header & Controls */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -108,12 +101,20 @@ const StudentListView: React.FC<StudentListViewProps> = ({ onSelectStudent }) =>
         </div>
 
         {isAdmin && (
-          <button 
-            onClick={() => setShowAddStudentModal(true)}
-            className="h-12 px-6 bg-brand-blue text-white rounded-[12px] font-bold shadow-lg shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all flex items-center gap-2"
-          >
-            <Plus size={20} /> <span className="hidden sm:inline">Add Student</span>
-          </button>
+          <div className="flex gap-3">
+            <button 
+                onClick={() => setShowBulkImport(true)}
+                className="h-12 px-4 bg-white border border-gray-200 text-gray-600 rounded-[12px] font-bold hover:bg-gray-50 transition-all flex items-center gap-2"
+            >
+                <UploadCloud size={20}/> <span className="hidden sm:inline">Bulk Import</span>
+            </button>
+            <button 
+                onClick={() => setShowWizard(true)}
+                className="h-12 px-6 bg-brand-blue text-white rounded-[12px] font-bold shadow-lg shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all flex items-center gap-2"
+            >
+                <Plus size={20} /> <span className="hidden sm:inline">Add Student</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -294,110 +295,20 @@ const StudentListView: React.FC<StudentListViewProps> = ({ onSelectStudent }) =>
         />
       )}
 
-      {/* ADD STUDENT MODAL */}
-      {showAddStudentModal && (
-        <div className="fixed inset-0 bg-brand-blue/20 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-           <div className="bg-white rounded-2xl p-8 w-full max-w-lg shadow-2xl relative animate-slide-up border border-gray-100 max-h-[90vh] overflow-y-auto">
-              <button onClick={() => setShowAddStudentModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 rounded-full p-1"><X size={20}/></button>
-              
-              <h3 className="text-xl font-display font-bold mb-1 text-brand-blue">Register New Student</h3>
-              <p className="text-sm text-gray-500 mb-6">Create a new student profile in the system.</p>
+      {/* REGISTRATION WIZARD */}
+      {showWizard && (
+          <StudentRegistrationWizard 
+            onClose={() => setShowWizard(false)}
+            onSuccess={handleRegistrationSuccess}
+          />
+      )}
 
-              <form onSubmit={handleAddStudentSubmit} className="space-y-4">
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                       <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Full Name</label>
-                       <input 
-                          type="text" 
-                          required 
-                          value={newStudent.name} 
-                          onChange={(e) => setNewStudent({...newStudent, name: e.target.value})} 
-                          className={modalInputClass}
-                          placeholder="e.g. Amani Mwangi"
-                        />
-                    </div>
-                    <div>
-                       <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Admission Number</label>
-                       <input 
-                          type="text" 
-                          required 
-                          value={newStudent.admissionNumber} 
-                          onChange={(e) => setNewStudent({...newStudent, admissionNumber: e.target.value})} 
-                          className={modalInputClass}
-                          placeholder="ADM-XXXX"
-                        />
-                    </div>
-                 </div>
-
-                 <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Grade Level</label>
-                    <select 
-                       value={newStudent.grade} 
-                       onChange={(e) => setNewStudent({...newStudent, grade: e.target.value})} 
-                       className={modalInputClass}
-                       required
-                    >
-                       <option value="">Select Grade</option>
-                       <option value="Grade 1">Grade 1</option>
-                       <option value="Grade 2">Grade 2</option>
-                       <option value="Grade 3">Grade 3</option>
-                       <option value="Grade 4">Grade 4</option>
-                       <option value="Grade 5">Grade 5</option>
-                       <option value="Grade 6">Grade 6</option>
-                    </select>
-                 </div>
-
-                 <div className="pt-4 border-t border-gray-100">
-                    <h4 className="text-sm font-bold text-gray-800 mb-3">Guardian Information</h4>
-                    <div className="space-y-4">
-                       <div>
-                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Parent/Guardian Name</label>
-                          <input 
-                             type="text" 
-                             required 
-                             value={newStudent.parentName} 
-                             onChange={(e) => setNewStudent({...newStudent, parentName: e.target.value})} 
-                             className={modalInputClass}
-                           />
-                       </div>
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                             <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Phone Number</label>
-                             <input 
-                                type="tel" 
-                                required 
-                                value={newStudent.contactPhone} 
-                                onChange={(e) => setNewStudent({...newStudent, contactPhone: e.target.value})} 
-                                className={modalInputClass}
-                                placeholder="07XX XXX XXX"
-                              />
-                          </div>
-                          <div>
-                             <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Email Address</label>
-                             <input 
-                                type="email" 
-                                value={newStudent.contactEmail} 
-                                onChange={(e) => setNewStudent({...newStudent, contactEmail: e.target.value})} 
-                                className={modalInputClass}
-                                placeholder="parent@email.com"
-                              />
-                          </div>
-                       </div>
-                    </div>
-                 </div>
-
-                 <div className="pt-6">
-                    <button 
-                      type="submit" 
-                      disabled={isAdding}
-                      className="w-full h-12 bg-brand-blue text-white rounded-[12px] font-bold shadow-lg shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all flex items-center justify-center gap-2"
-                    >
-                       {isAdding ? <Loader2 className="animate-spin" size={20}/> : 'Create Student Profile'}
-                    </button>
-                 </div>
-              </form>
-           </div>
-        </div>
+      {/* BULK IMPORT MODAL */}
+      {showBulkImport && (
+          <BulkStudentImport 
+            onClose={() => setShowBulkImport(false)}
+            onSuccess={handleImportSuccess}
+          />
       )}
 
     </div>

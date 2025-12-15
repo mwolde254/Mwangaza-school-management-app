@@ -62,7 +62,11 @@ export interface Student {
   id: string;
   name: string;
   grade: string; // e.g., "Grade 4"
+  stream?: string; // e.g., "East"
   admissionNumber: string;
+  dob?: string; // ISO Date
+  gender?: 'Male' | 'Female';
+  enrollmentDate?: string;
   parentName: string;
   contactPhone?: string;
   contactEmail?: string;
@@ -114,6 +118,17 @@ export interface FinanceTransaction {
   date: string;
   status: 'PAID' | 'PENDING';
   method: 'MPESA' | 'BANK' | 'CASH' | 'CARD';
+  reference?: string;
+}
+
+export interface FeeStructure {
+  id: string;
+  grade: string;
+  term: string;
+  items: { name: string; amount: number }[];
+  total: number;
+  status: 'DRAFT' | 'PUBLISHED';
+  academicYear: string;
 }
 
 export interface Competency {
@@ -140,6 +155,27 @@ export interface LeaveRequest {
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   rejectionReason?: string;
   requestDate: string;
+}
+
+// --- ACADEMICS / GRADE MANAGER TYPES ---
+
+export interface ClassStream {
+  id: string;
+  grade: string; // e.g. "Grade 4"
+  name: string; // e.g. "East"
+  color: string; // Hex Code e.g. "#38BDF8"
+  classTeacherId?: string;
+  classTeacherName?: string;
+}
+
+export interface SyllabusTopic {
+  id: string;
+  grade: string;
+  subject: string;
+  term: string;
+  title: string;
+  description?: string;
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
 }
 
 // --- CALENDAR TYPES ---
@@ -189,23 +225,39 @@ export interface TimetableSlot {
 
 // --- SUPPORT / HELP DESK TYPES ---
 
-export type TicketCategory = 'FEES' | 'ACADEMIC' | 'TRANSPORT' | 'DISCIPLINARY' | 'OTHER';
-export type TicketStatus = 'OPEN' | 'RESOLVED';
+export type TicketCategory = 'FEES' | 'ACADEMIC' | 'TRANSPORT' | 'DISCIPLINARY' | 'IT_SUPPORT' | 'MAINTENANCE' | 'HR' | 'OTHER';
+export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED';
+export type TicketPriority = 'NORMAL' | 'HIGH' | 'CRITICAL';
+export type TicketSource = 'PARENT' | 'STAFF';
+
+export interface TicketMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  role: string; // UserRole or 'SYSTEM'
+  message: string;
+  timestamp: string;
+  attachments?: string[];
+}
 
 export interface SupportTicket {
   id: string;
-  parentId: string;
-  parentName: string;
-  studentId?: string; // Optional linkage to specific child
+  source: TicketSource;
+  requestorId: string;
+  requestorName: string;
+  requestorRole: UserRole;
+  studentId?: string; // Optional linkage to specific child (Parent tickets)
   studentName?: string;
   category: TicketCategory;
   subject: string;
-  message: string;
   status: TicketStatus;
-  date: string;
-  adminResponse?: string;
-  resolvedAt?: string;
-  resolvedBy?: string;
+  priority: TicketPriority;
+  location?: string; // For facility/maintenance issues
+  assignedToId?: string; // Staff ID
+  assignedToName?: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: TicketMessage[];
 }
 
 // --- ADMISSIONS TYPES ---

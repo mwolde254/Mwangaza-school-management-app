@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserRole } from './types';
 import { StudentDataProvider } from './context/StudentDataContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -22,6 +22,24 @@ const AuthenticatedApp: React.FC = () => {
   // Auth Flow State
   const [authStep, setAuthStep] = useState<'LANDING' | 'LOGIN' | 'SIGNUP'>('LANDING');
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+
+  // Magic Link Handling
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const magicToken = params.get('magic_token');
+    const magicEmail = params.get('email');
+
+    if (magicToken && magicEmail) {
+        // Clear params to clean URL
+        window.history.replaceState({}, document.title, "/");
+        // Simulate verify and login
+        login(magicEmail).then(success => {
+            if (!success) {
+                alert("Invalid or expired magic link.");
+            }
+        });
+    }
+  }, [login]);
 
   const handleDevLogin = async (role: UserRole) => {
     let email = '';

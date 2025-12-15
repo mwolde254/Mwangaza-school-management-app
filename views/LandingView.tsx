@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Gavel, BookOpen, Home, ChevronLeft, LogIn, UserPlus, Settings, Sparkles, CheckCircle2, TrendingUp, Shield, MessageCircle, Menu, X, ArrowRight, Quote, Phone, Mail, LayoutDashboard, Smartphone, Check, ChevronDown, Terminal, Calendar as CalendarIcon, MapPin } from 'lucide-react';
+import { Gavel, BookOpen, Home, ChevronLeft, LogIn, UserPlus, Settings, Sparkles, CheckCircle2, TrendingUp, Shield, MessageCircle, Menu, X, ArrowRight, Quote, Phone, Mail, LayoutDashboard, Smartphone, Check, ChevronDown, Terminal, Calendar as CalendarIcon, MapPin, Wallet, Bus, Clock, Heart, Star, Users } from 'lucide-react';
 import { UserRole } from '../types';
 import AdmissionsWizard from '../components/AdmissionsWizard';
 import { db } from '../services/db';
@@ -32,33 +32,7 @@ const Navbar = ({ onLoginClick, onRequestDemo, onApplyNow }: { onLoginClick: () 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const NavItem = ({ title, href, subItems }: { title: string, href: string, subItems: string[] }) => (
-    <div className="relative group">
-      <a 
-        href={href} 
-        className="flex items-center gap-1 text-sm font-bold text-gray-600 hover:text-brand-blue transition-colors py-2"
-      >
-        {title}
-        <ChevronDown size={14} className="transition-transform duration-300 group-hover:-rotate-180 text-gray-400 group-hover:text-brand-blue" />
-      </a>
-      
-      {/* Dropdown with hover bridge */}
-      <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-4 group-hover:translate-y-0 z-50">
-         <div className="absolute -top-2 left-0 w-full h-4 bg-transparent"></div>
-         <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-xl border border-gray-100 p-1.5 ring-1 ring-black/5 overflow-hidden">
-            {subItems.map((item, idx) => (
-               <a 
-                 key={idx} 
-                 href="#" 
-                 className="block px-4 py-2.5 text-xs font-bold text-gray-600 hover:bg-brand-blue/5 hover:text-brand-blue rounded-lg transition-colors"
-               >
-                  {item}
-               </a>
-            ))}
-         </div>
-      </div>
-    </div>
-  );
+  const navLinkClass = "text-sm font-bold text-gray-600 hover:text-brand-blue transition-colors";
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white/90 backdrop-blur-md shadow-sm py-3' : 'bg-transparent py-5'}`}>
@@ -71,23 +45,11 @@ const Navbar = ({ onLoginClick, onRequestDemo, onApplyNow }: { onLoginClick: () 
           <span className={`font-display font-extrabold text-2xl tracking-tight ${isScrolled ? 'text-brand-blue' : 'text-brand-blue'}`}>Mwangaza</span>
         </div>
 
-        {/* Desktop Links */}
+        {/* Desktop Links - Simple Navigation */}
         <div className="hidden md:flex items-center gap-8">
-           <NavItem 
-             title="Features" 
-             href="#features" 
-             subItems={['Academics & CBC', 'Financial Management', 'Transport System', 'Communication Hub']} 
-           />
-           <NavItem 
-             title="Community" 
-             href="#community" 
-             subItems={['School Events', 'Student Life', 'Testimonials', 'Parent Association']} 
-           />
-           <NavItem 
-             title="About" 
-             href="#about" 
-             subItems={['Our Mission', 'Leadership Team', 'Careers', 'Contact Support']} 
-           />
+           <a href="#features" className={navLinkClass}>Features</a>
+           <a href="#about" className={navLinkClass}>About</a>
+           <a href="#about" className={navLinkClass}>Our Team</a>
         </div>
 
         {/* CTA */}
@@ -116,11 +78,15 @@ const Navbar = ({ onLoginClick, onRequestDemo, onApplyNow }: { onLoginClick: () 
       {mobileMenuOpen && (
         <div className="absolute top-full left-0 right-0 bg-white border-t border-gray-100 p-6 shadow-xl md:hidden animate-slide-up">
           <div className="flex flex-col gap-4">
-            {['Features', 'Community', 'About'].map(link => (
-              <a key={link} href={`#${link.toLowerCase()}`} className="text-lg font-bold text-gray-800" onClick={() => setMobileMenuOpen(false)}>
-                {link}
-              </a>
-            ))}
+            <a href="#features" className="text-lg font-bold text-gray-800" onClick={() => setMobileMenuOpen(false)}>
+              Features
+            </a>
+            <a href="#about" className="text-lg font-bold text-gray-800" onClick={() => setMobileMenuOpen(false)}>
+              About
+            </a>
+            <a href="#about" className="text-lg font-bold text-gray-800" onClick={() => setMobileMenuOpen(false)}>
+              Our Team
+            </a>
             <hr className="border-gray-100 my-2"/>
             <button 
               onClick={() => { onApplyNow(); setMobileMenuOpen(false); }}
@@ -142,12 +108,12 @@ const Navbar = ({ onLoginClick, onRequestDemo, onApplyNow }: { onLoginClick: () 
 };
 
 const FeatureCard = ({ icon: Icon, title, desc }: { icon: any, title: string, desc: string }) => (
-  <div className="p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-brand-sky/30 transition-all group">
+  <div className="p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-brand-sky/30 transition-all group h-full flex flex-col">
     <div className="w-12 h-12 bg-brand-grey rounded-xl flex items-center justify-center text-brand-blue mb-4 group-hover:bg-brand-blue group-hover:text-white transition-colors">
       <Icon size={24} />
     </div>
     <h3 className="font-display font-bold text-xl text-gray-800 mb-2">{title}</h3>
-    <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
+    <p className="text-gray-500 text-sm leading-relaxed flex-1">{desc}</p>
   </div>
 );
 
@@ -158,35 +124,6 @@ const StatItem = ({ value, label }: { value: string, label: string }) => (
   </div>
 );
 
-const TestimonialCard = ({ quote, author, role }: { quote: string, author: string, role: string }) => (
-  <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative">
-    <Quote size={40} className="text-brand-yellow/20 absolute top-6 right-6" />
-    <p className="text-gray-600 italic mb-6 relative z-10">"{quote}"</p>
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 bg-brand-grey rounded-full flex items-center justify-center font-bold text-brand-blue">
-        {author[0]}
-      </div>
-      <div>
-        <p className="font-bold text-gray-800 text-sm">{author}</p>
-        <p className="text-xs text-brand-sky font-bold uppercase">{role}</p>
-      </div>
-    </div>
-  </div>
-);
-
-const EventCard = ({ date, title, category, image }: { date: string, title: string, category: string, image: string }) => (
-  <div className="group rounded-2xl overflow-hidden cursor-pointer relative h-64 shadow-md hover:shadow-xl transition-all">
-    <img src={image} alt={title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"/>
-    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent p-6 flex flex-col justify-end">
-       <span className="inline-block w-fit px-2 py-1 rounded bg-brand-yellow text-[10px] font-bold text-brand-blue uppercase mb-2">{category}</span>
-       <h4 className="text-white font-display font-bold text-xl leading-tight mb-1">{title}</h4>
-       <p className="text-white/70 text-xs flex items-center gap-2">
-          <CalendarIcon size={12}/> {date}
-       </p>
-    </div>
-  </div>
-);
-
 const TeamCard = ({ name, role, img }: { name: string, role: string, img: string }) => (
   <div className="text-center group">
     <div className="w-24 h-24 mx-auto rounded-full overflow-hidden mb-4 border-4 border-white shadow-lg group-hover:border-brand-sky transition-colors">
@@ -194,6 +131,27 @@ const TeamCard = ({ name, role, img }: { name: string, role: string, img: string
     </div>
     <h4 className="font-bold text-gray-800 text-lg">{name}</h4>
     <p className="text-xs text-brand-blue font-bold uppercase tracking-wide mt-1">{role}</p>
+  </div>
+);
+
+const TestimonialCard = ({ quote, author, role, image }: { quote: string, author: string, role: string, image: string }) => (
+  <div className="bg-white p-8 rounded-[24px] border border-gray-100 shadow-sm relative hover:shadow-xl transition-all h-full flex flex-col">
+    <Quote size={40} className="text-brand-blue/10 absolute top-6 right-6" />
+    <div className="flex-1 mb-6">
+      <div className="flex gap-1 mb-4">
+        {[...Array(5)].map((_, i) => (
+          <Star key={i} size={14} className="text-brand-yellow fill-brand-yellow" />
+        ))}
+      </div>
+      <p className="text-gray-600 italic leading-relaxed">"{quote}"</p>
+    </div>
+    <div className="flex items-center gap-4 pt-4 border-t border-gray-50">
+      <img src={image} alt={author} className="w-12 h-12 rounded-full object-cover border-2 border-brand-grey" />
+      <div>
+        <h4 className="font-bold text-gray-900 text-sm">{author}</h4>
+        <p className="text-xs text-brand-blue font-bold uppercase tracking-wide">{role}</p>
+      </div>
+    </div>
   </div>
 );
 
@@ -464,17 +422,32 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
                <FeatureCard 
                   icon={TrendingUp} 
                   title="CBC Assessment Tracking" 
-                  desc="Effortlessly record and track learner competencies. Move beyond grades to holistic development tracking with visual analytics."
+                  desc="Record learner competencies with ease. Move beyond grades to holistic development tracking."
                />
                <FeatureCard 
                   icon={Shield} 
                   title="Secure & Private" 
-                  desc="Bank-level encryption for student data and payments. Role-based access ensures information is seen only by those authorized."
+                  desc="Bank-level encryption for student data and payments. Role-based access ensures privacy."
                />
                <FeatureCard 
                   icon={MessageCircle} 
                   title="Instant Communication" 
-                  desc="SMS blasts, email newsletters, and direct in-app messaging keep parents connected to their child's journey in real-time."
+                  desc="SMS blasts and direct in-app messaging keep parents connected to their child's journey."
+               />
+               <FeatureCard 
+                  icon={Wallet} 
+                  title="Integrated Finance" 
+                  desc="Automated fee collection via M-Pesa and bank integrations with real-time reconciliation."
+               />
+               <FeatureCard 
+                  icon={Bus} 
+                  title="Smart Transport" 
+                  desc="Track school buses in real-time and manage routes for student safety and efficiency."
+               />
+               <FeatureCard 
+                  icon={Clock} 
+                  title="Dynamic Timetabling" 
+                  desc="Conflict-free schedule generation for classes, teachers, and resources."
                />
             </div>
          </div>
@@ -576,53 +549,32 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
         </div>
       </section>
 
-      {/* COMMUNITY SECTION (New & Expanded) */}
-      <section id="community" className="py-24 bg-white border-t border-gray-100">
+      {/* TESTIMONIALS SECTION */}
+      <section id="testimonials" className="py-24 bg-white">
          <div className="max-w-7xl mx-auto px-6">
-            <div className="text-center mb-16">
-               <h2 className="text-brand-blue font-bold text-sm uppercase tracking-widest mb-3">Our Community</h2>
-               <h3 className="font-display font-extrabold text-3xl text-gray-900">Life at Mwangaza</h3>
+            <div className="text-center max-w-3xl mx-auto mb-16">
+               <h2 className="text-brand-blue font-bold text-sm uppercase tracking-widest mb-3">Community Feedback</h2>
+               <h3 className="font-display font-extrabold text-4xl text-gray-900">Trusted by Parents, Loved by Teachers</h3>
             </div>
 
-            {/* Events Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
-               <EventCard 
-                  date="Oct 28, 2023"
-                  title="Regional Science Fair"
-                  category="Academics"
-                  image="https://images.unsplash.com/photo-1564939558297-fc396f18e5c7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-               />
-               <EventCard 
-                  date="Nov 05, 2023"
-                  title="Sports Day Finals"
-                  category="Athletics"
-                  image="https://images.unsplash.com/photo-1461896836934-ffe607ba8211?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-               />
-               <EventCard 
-                  date="Dec 10, 2023"
-                  title="Annual Music Concert"
-                  category="Arts & Culture"
-                  image="https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-               />
-            </div>
-
-            {/* Testimonials */}
-            <h3 className="font-display font-bold text-2xl text-gray-800 mb-8 text-center">What People Say</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                <TestimonialCard 
-                  quote="Mwangaza has completely eliminated our paperwork. The CBC reports are generated instantly!"
-                  author="Mrs. J. Omondi"
-                  role="School Principal"
+                  quote="Mwangaza has made paying school fees so easy. I get SMS reminders and can pay via M-Pesa instantly from my phone."
+                  author="Sarah Kamau"
+                  role="Parent, Grade 4"
+                  image="https://ui-avatars.com/api/?name=Sarah+Kamau&background=FCD34D&color=fff"
                />
                <TestimonialCard 
-                  quote="I love getting real-time updates when my son arrives at school. Peace of mind is priceless."
-                  author="David Kamau"
-                  role="Parent (Grade 4)"
-               />
-               <TestimonialCard 
-                  quote="Taking attendance and recording competencies is so fast now. I can focus on teaching."
-                  author="Tr. Sarah"
+                  quote="Reporting student progress used to take weeks. Now with the CBC assessment tools, I can record observations in minutes."
+                  author="Mr. John Maina"
                   role="Senior Teacher"
+                  image="https://ui-avatars.com/api/?name=John+Maina&background=059669&color=fff"
+               />
+               <TestimonialCard 
+                  quote="The financial transparency is a game changer. I can track every shilling in real-time and ensure resources are allocated correctly."
+                  author="Mrs. M. Mwangi"
+                  role="Principal"
+                  image="https://ui-avatars.com/api/?name=Mwangi&background=1E3A8A&color=fff"
                />
             </div>
          </div>
@@ -639,12 +591,12 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-500 text-xs font-bold shadow-sm mb-6">
                      <Home size={14} /> Established 2010
                   </div>
-                  <h2 className="font-display font-extrabold text-4xl text-gray-900 mb-6">Empowering the Leaders of Tomorrow</h2>
+                  <h2 className="font-display font-extrabold text-4xl text-gray-900 mb-6">Our Team</h2>
                   <p className="text-gray-600 text-lg leading-relaxed mb-6">
                      Mwangaza was founded with a simple mission: to bridge the gap between traditional education and the digital future. We believe in holistic learning that respects the Kenyan competency-based curriculum while leveraging cutting-edge technology.
                   </p>
                   <p className="text-gray-600 text-lg leading-relaxed mb-8">
-                     Our campus in Westlands is a hub of innovation, creativity, and academic excellence, fostering a safe environment for over 500 students.
+                     Our campus in Westlands is a hub of innovation, creativity, and academic excellence, fostering a safe environment for over 500 students to explore, learn, and grow.
                   </p>
                   
                   <div className="grid grid-cols-2 gap-6">
@@ -664,10 +616,10 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
                   <div className="bg-white p-8 rounded-[24px] shadow-xl border border-gray-100">
                      <h3 className="font-display font-bold text-xl text-center mb-8">Meet Our Leadership</h3>
                      <div className="grid grid-cols-2 gap-y-8 gap-x-4">
-                        <TeamCard name="Mrs. J. Omondi" role="Principal" img="https://ui-avatars.com/api/?name=Jane+Omondi&background=1E3A8A&color=fff" />
-                        <TeamCard name="Mr. K. Njoroge" role="Dep. Academics" img="https://ui-avatars.com/api/?name=Kamau+Njoroge&background=059669&color=fff" />
-                        <TeamCard name="Tr. Sarah" role="Head of Sciences" img="https://ui-avatars.com/api/?name=Sarah+M&background=FCD34D&color=fff" />
                         <TeamCard name="Dr. A. Hassan" role="Board Chair" img="https://ui-avatars.com/api/?name=Ali+Hassan&background=EF4444&color=fff" />
+                        <TeamCard name="Mr. Emmanuel Omondi" role="Board Member" img="https://ui-avatars.com/api/?name=Emmanuel+Omondi&background=1E3A8A&color=fff" />
+                        <TeamCard name="Morgan Wolde" role="Software Developer" img="https://ui-avatars.com/api/?name=Morgan+Wolde&background=059669&color=fff" />
+                        <TeamCard name="Mrs. M. Mwangi" role="Principal" img="https://ui-avatars.com/api/?name=M+Mwangi&background=FCD34D&color=fff" />
                      </div>
                   </div>
                </div>
@@ -703,7 +655,6 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
                      <li><a href="#" className="hover:text-brand-sky transition-colors">Features</a></li>
                      <li><a href="#" className="hover:text-brand-sky transition-colors">Pricing</a></li>
                      <li><a href="#" className="hover:text-brand-sky transition-colors">CBC Resources</a></li>
-                     <li><a href="#" className="hover:text-brand-sky transition-colors">Case Studies</a></li>
                   </ul>
                </div>
 
@@ -712,7 +663,6 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
                   <ul className="space-y-4 text-gray-400 text-sm">
                      <li><a href="#" className="hover:text-brand-sky transition-colors">Help Center</a></li>
                      <li><a href="#" className="hover:text-brand-sky transition-colors">Contact Us</a></li>
-                     <li><a href="#" className="hover:text-brand-sky transition-colors">System Status</a></li>
                      <li><a href="#" className="hover:text-brand-sky transition-colors">Privacy Policy</a></li>
                   </ul>
                </div>
@@ -722,7 +672,6 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
                   <ul className="space-y-4 text-gray-400 text-sm">
                      <li className="flex items-center gap-3"><Phone size={16} className="text-brand-sky"/> +254 700 123 456</li>
                      <li className="flex items-center gap-3"><Mail size={16} className="text-brand-sky"/> hello@mwangaza.co.ke</li>
-                     <li className="flex items-start gap-3"><Home size={16} className="text-brand-sky mt-1"/> Westlands, Nairobi, Kenya</li>
                   </ul>
                </div>
             </div>
@@ -742,37 +691,33 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
 
       {/* Dev Login Widget */}
       {onDevLogin && (
-        <div className="fixed bottom-4 right-4 z-50 bg-gray-100/90 backdrop-blur border border-gray-300 rounded-lg shadow-xl p-3 animate-fade-in max-w-xs">
-           <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-300">
-              <Terminal size={14} className="text-gray-500"/>
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Dev Access Only</span>
+        <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end group">
+           {/* Expanded Menu */}
+           <div className="mb-3 bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 w-48 opacity-0 invisible translate-y-4 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-300 ease-out origin-bottom-right">
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+                 <Terminal size={14} className="text-gray-400"/>
+                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Dev Quick Login</span>
+              </div>
+              <div className="flex flex-col gap-2">
+                 <button onClick={() => onDevLogin(UserRole.ADMIN)} className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-brand-blue/5 hover:text-brand-blue rounded-lg transition-colors">
+                    Admin
+                 </button>
+                 <button onClick={() => onDevLogin(UserRole.PRINCIPAL)} className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-brand-blue/5 hover:text-brand-blue rounded-lg transition-colors">
+                    Principal
+                 </button>
+                 <button onClick={() => onDevLogin(UserRole.TEACHER)} className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-brand-green/5 hover:text-brand-green rounded-lg transition-colors">
+                    Teacher
+                 </button>
+                 <button onClick={() => onDevLogin(UserRole.PARENT)} className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-brand-sky/5 hover:text-brand-sky rounded-lg transition-colors">
+                    Parent
+                 </button>
+              </div>
            </div>
-           <div className="grid grid-cols-2 gap-2">
-              <button 
-                onClick={() => onDevLogin(UserRole.ADMIN)}
-                className="px-3 py-2 bg-white hover:bg-brand-blue hover:text-white text-xs font-bold text-brand-blue rounded border border-gray-200 transition-colors"
-              >
-                Admin
-              </button>
-              <button 
-                onClick={() => onDevLogin(UserRole.PRINCIPAL)}
-                className="px-3 py-2 bg-white hover:bg-brand-blue hover:text-white text-xs font-bold text-brand-blue rounded border border-gray-200 transition-colors"
-              >
-                Principal
-              </button>
-              <button 
-                onClick={() => onDevLogin(UserRole.TEACHER)}
-                className="px-3 py-2 bg-white hover:bg-brand-blue hover:text-white text-xs font-bold text-brand-blue rounded border border-gray-200 transition-colors"
-              >
-                Teacher
-              </button>
-              <button 
-                onClick={() => onDevLogin(UserRole.PARENT)}
-                className="px-3 py-2 bg-white hover:bg-brand-blue hover:text-white text-xs font-bold text-brand-blue rounded border border-gray-200 transition-colors"
-              >
-                Parent
-              </button>
-           </div>
+
+           {/* FAB Trigger */}
+           <button className="w-12 h-12 bg-gray-100 hover:bg-white text-gray-800 rounded-full shadow-lg border border-gray-200 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl group-hover:border-brand-blue group-hover:text-brand-blue">
+              <Terminal size={20} />
+           </button>
         </div>
       )}
 

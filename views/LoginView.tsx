@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Lock, Mail, ArrowRight, Loader2, ChevronLeft, Check } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Loader2, ChevronLeft, Check, Sparkles } from 'lucide-react';
 import { UserRole } from '../types';
 
 interface LoginViewProps {
@@ -15,6 +15,7 @@ const LoginView: React.FC<LoginViewProps> = ({ role, onBack }) => {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
 
   // Pre-fill email for demo purposes based on role
   useEffect(() => {
@@ -57,6 +58,20 @@ const LoginView: React.FC<LoginViewProps> = ({ role, onBack }) => {
     }
     setResetSent(true);
     setTimeout(() => setResetSent(false), 4000);
+  };
+
+  const handleMagicLink = async () => {
+    if (!email) {
+        setError('Please enter your email address first.');
+        return;
+    }
+    setIsSubmitting(true);
+    // Simulate API call
+    await new Promise(r => setTimeout(r, 1000));
+    setMagicLinkSent(true);
+    setIsSubmitting(false);
+    // In a real app, this would send an email. 
+    // For demo, we can assume the user clicks a link that reloads the app with ?magic_token=123
   };
 
   const inputClass = `w-full h-12 pl-12 pr-4 bg-gray-50 rounded-[6px] border focus:bg-white outline-none transition-all font-medium ${error ? 'border-brand-red focus:border-brand-red focus:ring-2 focus:ring-brand-red/20' : 'border-gray-200 focus:border-brand-sky focus:ring-2 focus:ring-brand-sky/20'}`;
@@ -102,57 +117,91 @@ const LoginView: React.FC<LoginViewProps> = ({ role, onBack }) => {
              <p className="text-lg font-bold text-gray-800 font-display">{roleLabels[role]}</p>
           </div>
           
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Email Address</label>
-              <div className="relative">
-                <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 ${error ? 'text-brand-red' : 'text-gray-400'}`} size={18} />
-                <input 
-                  type="email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email" 
-                  className={inputClass}
-                  required
-                />
+          {magicLinkSent ? (
+              <div className="text-center py-8 animate-fade-in">
+                  <div className="w-16 h-16 bg-brand-sky/10 rounded-full flex items-center justify-center text-brand-sky mx-auto mb-4">
+                      <Mail size={32}/>
+                  </div>
+                  <h3 className="font-bold text-xl text-gray-800 mb-2">Check your email</h3>
+                  <p className="text-gray-600 text-sm mb-6">
+                      We've sent a magic login link to <span className="font-bold">{email}</span>. Click it to sign in instantly.
+                  </p>
+                  <button onClick={() => setMagicLinkSent(false)} className="text-brand-blue text-sm font-bold hover:underline">
+                      Use password instead
+                  </button>
               </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Email Address</label>
+                <div className="relative">
+                    <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 ${error ? 'text-brand-red' : 'text-gray-400'}`} size={18} />
+                    <input 
+                    type="email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email" 
+                    className={inputClass}
+                    required
+                    />
+                </div>
+                </div>
+                
+                <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Password</label>
+                <div className="relative">
+                    <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 ${error ? 'text-brand-red' : 'text-gray-400'}`} size={18} />
+                    <input 
+                    type="password" 
+                    placeholder="••••••••" 
+                    className={inputClass}
+                    // Password not actually checked in mock
+                    />
+                </div>
+                </div>
+
+                {error && (
+                <div className="p-3 bg-brand-red/10 text-brand-red text-sm font-bold rounded-lg flex items-center gap-2 animate-fade-in">
+                    <span>⚠️</span> {error}
+                </div>
+                )}
+
+                <div className="space-y-3">
+                    <button 
+                        type="submit" 
+                        disabled={isSubmitting}
+                        className="w-full h-14 bg-brand-blue text-white rounded-[12px] font-bold hover:bg-brand-blue/90 transition-all shadow-lg shadow-brand-blue/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed focus:ring-4 focus:ring-brand-sky/30 active:scale-[0.98] duration-150"
+                    >
+                        {isSubmitting ? (
+                            <Loader2 className="animate-spin" size={20} />
+                        ) : (
+                            <>Sign In <ArrowRight size={20} /></>
+                        )}
+                    </button>
+                    
+                    <div className="relative flex items-center py-2">
+                        <div className="flex-grow border-t border-gray-100"></div>
+                        <span className="flex-shrink-0 mx-4 text-gray-300 text-xs font-bold uppercase">OR</span>
+                        <div className="flex-grow border-t border-gray-100"></div>
+                    </div>
+
+                    <button 
+                        type="button"
+                        onClick={handleMagicLink}
+                        disabled={isSubmitting}
+                        className="w-full h-12 bg-brand-sky/10 text-brand-blue rounded-[12px] font-bold hover:bg-brand-sky/20 transition-all flex items-center justify-center gap-2"
+                    >
+                        <Sparkles size={18}/> Email me a login link
+                    </button>
+                </div>
+            </form>
+          )}
+
+          {!magicLinkSent && (
+            <div className="mt-6 pt-4 border-t border-gray-100 text-center">
+                <button type="button" onClick={handleForgotPassword} className="text-xs font-bold text-gray-400 hover:text-brand-blue transition-colors">Forgot Password?</button>
             </div>
-            
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Password</label>
-              <div className="relative">
-                <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 ${error ? 'text-brand-red' : 'text-gray-400'}`} size={18} />
-                <input 
-                  type="password" 
-                  placeholder="••••••••" 
-                  className={inputClass}
-                  // Password not actually checked in mock
-                />
-              </div>
-            </div>
-
-            {error && (
-              <div className="p-3 bg-brand-red/10 text-brand-red text-sm font-bold rounded-lg flex items-center gap-2 animate-fade-in">
-                 <span>⚠️</span> {error}
-              </div>
-            )}
-
-            <button 
-              type="submit" 
-              disabled={isSubmitting}
-              className="w-full h-14 bg-brand-blue text-white rounded-[12px] font-bold hover:bg-brand-blue/90 transition-all shadow-lg shadow-brand-blue/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed focus:ring-4 focus:ring-brand-sky/30 active:scale-[0.98] duration-150"
-            >
-              {isSubmitting ? (
-                <Loader2 className="animate-spin" size={20} />
-              ) : (
-                <>Sign In <ArrowRight size={20} /></>
-              )}
-            </button>
-          </form>
-
-          <div className="mt-8 pt-6 border-t border-gray-100 text-center">
-             <button type="button" onClick={handleForgotPassword} className="text-xs font-bold text-brand-sky hover:text-brand-blue transition-colors">Forgot Password?</button>
-          </div>
+          )}
         </div>
       </div>
     </div>

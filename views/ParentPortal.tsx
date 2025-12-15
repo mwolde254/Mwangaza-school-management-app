@@ -8,7 +8,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
 import PaymentGatewayModal from '../components/PaymentGatewayModal';
 import TimetableModule from '../components/TimetableModule';
-import { TicketCategory } from '../types';
+import { TicketCategory, UserRole } from '../types';
 
 const ParentPortal: React.FC = () => {
   const { students, transactions, attendance, competencies, events, consents, submitConsent, supportTickets, addSupportTicket, transportRoutes, transportVehicles } = useStudentData();
@@ -113,7 +113,7 @@ const ParentPortal: React.FC = () => {
 
   const handleSubmitTicket = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ticketSubject || !ticketMessage) return;
+    if (!ticketSubject || !ticketMessage || !user) return;
     setIsSubmittingTicket(true);
     
     // Resolve student name if selected
@@ -121,15 +121,28 @@ const ParentPortal: React.FC = () => {
 
     try {
         await addSupportTicket({
-            parentId: user?.id || 'unknown',
-            parentName: user?.name || 'Parent',
+            source: 'PARENT',
+            requestorId: user.id,
+            requestorName: user.name,
+            requestorRole: UserRole.PARENT,
             studentId: ticketStudentId || undefined,
             studentName: relStudent?.name,
             category: ticketCategory,
             subject: ticketSubject,
-            message: ticketMessage,
             status: 'OPEN',
-            date: new Date().toISOString()
+            priority: 'NORMAL',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            messages: [
+                {
+                    id: `msg_${Date.now()}`,
+                    senderId: user.id,
+                    senderName: user.name,
+                    role: UserRole.PARENT,
+                    message: ticketMessage,
+                    timestamp: new Date().toISOString()
+                }
+            ]
         });
         showToast("Query submitted successfully. We will respond shortly.");
         setTicketSubject('');
@@ -175,7 +188,7 @@ const ParentPortal: React.FC = () => {
   const activeVehicle = activeRoute ? transportVehicles.find(v => v.routeId === activeRoute.id) : null;
 
   // My Tickets
-  const myTickets = supportTickets.filter(t => t.parentId === user?.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const myTickets = supportTickets.filter(t => t.requestorId === user?.id).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   // Derived Attendance Stats
   const totalDays = childAttendance.length || 1;
@@ -454,10 +467,6 @@ const ParentPortal: React.FC = () => {
         </div>
       )}
 
-      {/* ... (Support Mode & Modals same as before) ... */}
-      
-      {/* Re-rendering existing Modals for full functionality preservation */}
-      {/* ... (Copy of Support Mode & Payment Modal code) ... */}
       {/* === SUPPORT MODE === */}
       {mode === 'SUPPORT' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-up">
@@ -572,7 +581,7 @@ const ParentPortal: React.FC = () => {
                                     <div>
                                         <p className="text-sm font-bold text-gray-800">{ticket.subject}</p>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-[10px] text-gray-500">{format(new Date(ticket.date), 'dd MMM yyyy')}</span>
+                                            <span className="text-[10px] text-gray-500">{format(new Date(ticket.createdAt), 'dd MMM yyyy')}</span>
                                             <span className="text-[10px] bg-white border border-gray-200 px-1.5 rounded text-gray-500 font-bold uppercase">{ticket.category}</span>
                                         </div>
                                     </div>
@@ -588,19 +597,21 @@ const ParentPortal: React.FC = () => {
                                 
                                 {expandedTicketId === ticket.id && (
                                     <div className="p-4 bg-white border-t border-gray-100 text-sm animate-fade-in">
-                                        <p className="text-gray-600 mb-3">{ticket.message}</p>
-                                        
-                                        {ticket.adminResponse ? (
-                                            <div className="bg-brand-green/5 border border-brand-green/10 rounded-lg p-3">
-                                                <p className="text-xs font-bold text-brand-green uppercase mb-1 flex items-center gap-1">
-                                                    <Check size={12}/> Response from {ticket.resolvedBy || 'Admin'}
-                                                </p>
-                                                <p className="text-gray-800">{ticket.adminResponse}</p>
-                                                <p className="text-[10px] text-gray-400 mt-2 text-right">Resolved: {ticket.resolvedAt && format(new Date(ticket.resolvedAt), 'dd MMM, HH:mm')}</p>
+                                        {ticket.messages.map((msg) => (
+                                            <div key={msg.id} className={`mb-3 p-3 rounded-lg ${msg.role === 'PARENT' ? 'bg-gray-50' : 'bg-brand-blue/5 border border-brand-blue/10 ml-4'}`}>
+                                                <div className="flex justify-between mb-1">
+                                                    <span className={`text-xs font-bold ${msg.role === 'PARENT' ? 'text-gray-600' : 'text-brand-blue'}`}>
+                                                        {msg.senderName} ({msg.role === 'ADMIN' ? 'Admin' : 'Parent'})
+                                                    </span>
+                                                    <span className="text-[10px] text-gray-400">{format(new Date(msg.timestamp), 'HH:mm')}</span>
+                                                </div>
+                                                <p className="text-gray-700">{msg.message}</p>
                                             </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2 text-gray-400 text-xs italic bg-gray-50 p-2 rounded">
-                                                <Loader2 size={12} className="animate-spin"/> Awaiting response from administration.
+                                        ))}
+                                        
+                                        {ticket.status !== 'RESOLVED' && (
+                                            <div className="flex items-center gap-2 text-gray-400 text-xs italic bg-gray-50 p-2 rounded mt-3">
+                                                <Loader2 size={12} className="animate-spin"/> Awaiting response...
                                             </div>
                                         )}
                                     </div>
