@@ -4,6 +4,7 @@ import { Gavel, BookOpen, Home, ChevronLeft, LogIn, UserPlus, Settings, Sparkles
 import { UserRole } from '../types';
 import AdmissionsWizard from '../components/AdmissionsWizard';
 import { db } from '../services/db';
+import { Link } from 'react-router-dom';
 
 interface LandingViewProps {
   onLoginSelect: (role: UserRole) => void;
@@ -47,9 +48,9 @@ const Navbar = ({ onLoginClick, onRequestDemo, onApplyNow }: { onLoginClick: () 
 
         {/* Desktop Links - Simple Navigation */}
         <div className="hidden md:flex items-center gap-8">
+           <Link to="/about" className={navLinkClass}>About Us</Link>
            <a href="#features" className={navLinkClass}>Features</a>
-           <a href="#about" className={navLinkClass}>About</a>
-           <a href="#about" className={navLinkClass}>Our Team</a>
+           <a href="#testimonials" className={navLinkClass}>Community</a>
         </div>
 
         {/* CTA */}
@@ -78,14 +79,14 @@ const Navbar = ({ onLoginClick, onRequestDemo, onApplyNow }: { onLoginClick: () 
       {mobileMenuOpen && (
         <div className="absolute top-full left-0 right-0 bg-white border-t border-gray-100 p-6 shadow-xl md:hidden animate-slide-up">
           <div className="flex flex-col gap-4">
+            <Link to="/about" className="text-lg font-bold text-gray-800" onClick={() => setMobileMenuOpen(false)}>
+              About Us
+            </Link>
             <a href="#features" className="text-lg font-bold text-gray-800" onClick={() => setMobileMenuOpen(false)}>
               Features
             </a>
-            <a href="#about" className="text-lg font-bold text-gray-800" onClick={() => setMobileMenuOpen(false)}>
-              About
-            </a>
-            <a href="#about" className="text-lg font-bold text-gray-800" onClick={() => setMobileMenuOpen(false)}>
-              Our Team
+            <a href="#testimonials" className="text-lg font-bold text-gray-800" onClick={() => setMobileMenuOpen(false)}>
+              Community
             </a>
             <hr className="border-gray-100 my-2"/>
             <button 
@@ -580,7 +581,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
          </div>
       </section>
 
-      {/* ABOUT SECTION (New) */}
+      {/* ABOUT SECTION (Reverted to "Our Team") */}
       <section id="about" className="py-24 bg-brand-grey/50 relative overflow-hidden">
          {/* Decor */}
          <div className="absolute -left-20 top-20 w-96 h-96 bg-brand-blue/5 rounded-full blur-3xl"></div>

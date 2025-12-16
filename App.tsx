@@ -13,6 +13,8 @@ import SettingsView from './views/SettingsView';
 import StudentProfileView from './views/StudentProfileView';
 import StudentListView from './views/StudentListView';
 import SignupView from './views/SignupView';
+import AboutView from './views/AboutView';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 const AuthenticatedApp: React.FC = () => {
   const { user, loading, login } = useAuth();
@@ -25,13 +27,15 @@ const AuthenticatedApp: React.FC = () => {
 
   // Magic Link Handling
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const magicToken = params.get('magic_token');
-    const magicEmail = params.get('email');
+    // With HashRouter, query params might be after the hash or before. 
+    // We check both for robustness in this demo environment.
+    const url = new URL(window.location.href);
+    const magicToken = url.searchParams.get('magic_token');
+    const magicEmail = url.searchParams.get('email');
 
     if (magicToken && magicEmail) {
         // Clear params to clean URL
-        window.history.replaceState({}, document.title, "/");
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
         // Simulate verify and login
         login(magicEmail).then(success => {
             if (!success) {
@@ -136,7 +140,13 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <StudentDataProvider>
-        <AuthenticatedApp />
+        <HashRouter>
+          <Routes>
+            <Route path="/about" element={<AboutView />} />
+            <Route path="/" element={<AuthenticatedApp />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </HashRouter>
       </StudentDataProvider>
     </AuthProvider>
   );

@@ -4,14 +4,13 @@ import { useAuth } from '../context/AuthContext';
 import { useStudentData } from '../context/StudentDataContext';
 import { UserRole, SmsCategory, SmsTemplate, SmsTemplateStatus } from '../types';
 import { 
-  User, Lock, Bell, Globe, Moon, Shield, CreditCard, 
+  User, Lock, Bell, Globe, Shield, CreditCard, 
   BookOpen, MessageSquare, Users, Calendar, Save, Check,
-  Smartphone, Mail, AlertTriangle, Loader2, Link as LinkIcon, Unlink, Plus, AlertCircle, LayoutTemplate, Trash2, Eye, EyeOff, X, FileText, Send, Edit2
+  Smartphone, Mail, Loader2, Plus, LayoutTemplate, Trash2, Eye, EyeOff, X, Edit2, Settings, Send
 } from 'lucide-react';
-import { db } from '../services/db';
 import UserManagement from '../components/UserManagement';
 
-type SettingsTab = 'PROFILE' | 'NOTIFICATIONS' | 'REGION' | 'APPEARANCE' | 'ADMIN_SYSTEM' | 'ADMIN_ACCESS' | 'ADMIN_FINANCE' | 'TEMPLATES' | 'TEACHER_CLASS' | 'TEACHER_MSG' | 'PARENT_CHILD' | 'PARENT_FEES';
+type SettingsTab = 'PROFILE' | 'NOTIFICATIONS' | 'REGION' | 'ADMIN_SYSTEM' | 'ADMIN_ACCESS' | 'ADMIN_FINANCE' | 'TEMPLATES' | 'TEACHER_CLASS' | 'TEACHER_MSG' | 'PARENT_CHILD' | 'PARENT_FEES';
 
 interface NotificationEvent {
   id: string;
@@ -45,7 +44,6 @@ const SettingsView: React.FC = () => {
   const [phone, setPhone] = useState(user?.phoneNumber || '');
 
   // Mock Settings State
-  const [darkMode, setDarkMode] = useState(false);
   const [currency, setCurrency] = useState('KES');
   const [language, setLanguage] = useState('English');
 
@@ -286,18 +284,6 @@ const SettingsView: React.FC = () => {
     </div>
   );
 
-  const Toggle = ({ label, checked, onChange }: { label: string, checked: boolean, onChange: () => void }) => (
-    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-[12px] border border-gray-100">
-      <span className="font-medium text-gray-700 text-sm">{label}</span>
-      <button 
-        onClick={onChange}
-        className={`w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out ${checked ? 'bg-brand-green' : 'bg-gray-300'}`}
-      >
-        <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-200 ${checked ? 'translate-x-6' : 'translate-x-0'}`} />
-      </button>
-    </div>
-  );
-
   const Checkbox = ({ checked, onChange, disabled }: { checked: boolean, onChange: () => void, disabled: boolean }) => (
     <div 
       onClick={!disabled ? onChange : undefined}
@@ -380,7 +366,6 @@ const SettingsView: React.FC = () => {
         <NavItem id="PROFILE" label="Profile & Security" icon={User} />
         <NavItem id="NOTIFICATIONS" label="Notifications" icon={Bell} />
         <NavItem id="REGION" label="Language & Region" icon={Globe} />
-        <NavItem id="APPEARANCE" label="App Appearance" icon={Moon} />
 
         {/* Role Specific Modules */}
         {(user?.role === UserRole.ADMIN || user?.role === UserRole.TEACHER || user?.role === UserRole.PRINCIPAL) && (
@@ -390,7 +375,7 @@ const SettingsView: React.FC = () => {
             </div>
             {user?.role === UserRole.ADMIN && (
                 <>
-                    <NavItem id="ADMIN_SYSTEM" label="System Config" icon={CreditCard} />
+                    <NavItem id="ADMIN_SYSTEM" label="System Config" icon={Settings} />
                     <NavItem id="ADMIN_ACCESS" label="Access Control" icon={Shield} />
                     <NavItem id="ADMIN_FINANCE" label="Payment Gateways" icon={CreditCard} />
                 </>
@@ -477,7 +462,139 @@ const SettingsView: React.FC = () => {
             <UserManagement />
         )}
 
-        {/* ... (Existing Notification, Region, Appearance tabs) ... */}
+        {/* NOTIFICATIONS */}
+        {activeTab === 'NOTIFICATIONS' && (
+          <div className="max-w-3xl animate-slide-up">
+            <SectionTitle icon={Bell} title="Notification Preferences" />
+            
+            <div className="mb-6 p-4 bg-brand-blue/5 rounded-[12px] border border-brand-blue/10 flex items-center justify-between">
+               <div>
+                  <h4 className="font-bold text-gray-800 text-sm">Global Channels</h4>
+                  <p className="text-xs text-gray-500">Master switches for all alerts.</p>
+               </div>
+               <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                     <Checkbox checked={notifConfig.global.app} onChange={() => toggleGlobal('app')} disabled={false}/>
+                     <span className="text-sm font-medium">In-App</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                     <Checkbox checked={notifConfig.global.email} onChange={() => toggleGlobal('email')} disabled={false}/>
+                     <span className="text-sm font-medium">Email</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                     <Checkbox checked={notifConfig.global.sms} onChange={() => toggleGlobal('sms')} disabled={false}/>
+                     <span className="text-sm font-medium">SMS</span>
+                  </label>
+               </div>
+            </div>
+
+            <NotificationCard title="Financial Alerts" category="financial" events={notifConfig.categories.financial} color="bg-brand-green/10" />
+            <NotificationCard title="Academic Updates" category="academic" events={notifConfig.categories.academic} color="bg-brand-blue/10" />
+            <NotificationCard title="System & Security" category="system" events={notifConfig.categories.system} color="bg-brand-red/10" />
+            <NotificationCard title="Communication" category="communication" events={notifConfig.categories.communication} color="bg-brand-yellow/10" />
+
+            <div className="pt-4 flex justify-end">
+                <button 
+                  onClick={handleSaveNotifications}
+                  disabled={isSaving || !isDirty}
+                  className="px-6 py-3 bg-brand-blue text-white rounded-[12px] font-bold shadow-lg shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all flex items-center gap-2 disabled:opacity-70"
+                >
+                  {isSaving ? 'Saving...' : <><Save size={18}/> Save Preferences</>}
+                </button>
+            </div>
+          </div>
+        )}
+
+        {/* REGION */}
+        {activeTab === 'REGION' && (
+            <div className="max-w-2xl animate-slide-up">
+                <SectionTitle icon={Globe} title="Language & Region" />
+                <div className="space-y-6">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">System Currency</label>
+                        <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={inputClass}>
+                            <option value="KES">Kenyan Shilling (KES)</option>
+                            <option value="USD">US Dollar (USD)</option>
+                            <option value="EUR">Euro (EUR)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Interface Language</label>
+                        <select value={language} onChange={(e) => setLanguage(e.target.value)} className={inputClass}>
+                            <option value="English">English</option>
+                            <option value="Kiswahili">Kiswahili</option>
+                            <option value="French">French</option>
+                        </select>
+                    </div>
+                    <div className="pt-4 flex justify-end">
+                        <button onClick={handleSaveNotifications} disabled={isSaving} className="px-6 py-3 bg-brand-blue text-white rounded-[12px] font-bold shadow-lg hover:bg-brand-blue/90">
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* ADMIN SYSTEM */}
+        {activeTab === 'ADMIN_SYSTEM' && (
+            <div className="max-w-2xl animate-slide-up">
+                <SectionTitle icon={Settings} title="System Configuration" />
+                <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Academic Year</label>
+                            <input type="text" defaultValue="2023" className={inputClass} />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Current Term</label>
+                            <select defaultValue="Term 3" className={inputClass}>
+                                <option>Term 1</option>
+                                <option>Term 2</option>
+                                <option>Term 3</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="pt-4 flex justify-end">
+                        <button onClick={handleSaveNotifications} className="px-6 py-3 bg-brand-blue text-white rounded-[12px] font-bold shadow-lg hover:bg-brand-blue/90">
+                            Update Configuration
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* ADMIN FINANCE */}
+        {activeTab === 'ADMIN_FINANCE' && (
+            <div className="max-w-2xl animate-slide-up">
+                <SectionTitle icon={CreditCard} title="Payment Gateways" />
+                <div className="space-y-6">
+                    <div className="p-4 bg-brand-green/10 border border-brand-green/20 rounded-lg flex items-start gap-3">
+                        <Check size={20} className="text-brand-green mt-0.5"/>
+                        <div>
+                            <h4 className="font-bold text-brand-green text-sm">M-Pesa Integration Active</h4>
+                            <p className="text-xs text-gray-600 mt-1">Paybill 522522 is connected and receiving real-time IPN updates.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Consumer Key</label>
+                        <div className="relative">
+                            <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className={inputClass} />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Consumer Secret</label>
+                        <div className="relative">
+                            <input type="password" value={apiSecret} onChange={(e) => setApiSecret(e.target.value)} className={inputClass} />
+                        </div>
+                    </div>
+                    <div className="pt-4 flex justify-end">
+                        <button onClick={handleUpdateCredentials} disabled={isSaving} className="px-6 py-3 bg-brand-blue text-white rounded-[12px] font-bold shadow-lg hover:bg-brand-blue/90">
+                            {isSaving ? 'Updating...' : 'Update Keys'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
 
         {/* COMMUNICATION TEMPLATES */}
         {activeTab === 'TEMPLATES' && (
@@ -541,8 +658,6 @@ const SettingsView: React.FC = () => {
                 </div>
             </div>
         )}
-
-        {/* ... (Existing Admin Finance, Parent tabs) ... */}
         
         {/* TEMPLATE EDITOR MODAL */}
         {showTemplateModal && (

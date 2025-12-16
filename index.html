@@ -27,6 +27,26 @@
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
               display: ['Nunito', 'sans-serif'],
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.6s ease-out forwards',
+              'slide-up': 'slideUp 0.6s ease-out forwards',
+              'spin-slow': 'spin 15s linear infinite',
+              'spin-reverse-slow': 'spinReverse 15s linear infinite',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              },
+              slideUp: {
+                '0%': { transform: 'translateY(20px)', opacity: '0' },
+                '100%': { transform: 'translateY(0)', opacity: '1' },
+              },
+              spinReverse: {
+                '0%': { transform: 'rotate(0deg)' },
+                '100%': { transform: 'rotate(-360deg)' },
+              }
             }
           }
         }
@@ -68,6 +88,8 @@
     "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
     "date-fns": "https://aistudiocdn.com/date-fns@^4.1.0",
+    "react-router": "https://aistudiocdn.com/react-router@^6.22.3",
+    "@remix-run/router": "https://aistudiocdn.com/@remix-run/router@^1.15.3",
     "react-router-dom": "https://aistudiocdn.com/react-router-dom@^6.22.3"
   }
 }

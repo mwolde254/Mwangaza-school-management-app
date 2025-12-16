@@ -438,9 +438,9 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const submitAttendance = async (records: AttendanceRecord[]) => {
-    for (const record of records) {
-        await performWrite('attendance', 'CREATE', record);
-    }
+    // PERFORMANCE FIX: Use Promise.all for parallel execution instead of sequential for loop
+    const writes = records.map(record => performWrite('attendance', 'CREATE', record));
+    await Promise.all(writes);
   };
 
   const addAssessment = async (assessment: Omit<Assessment, 'id'>) => {
@@ -448,9 +448,9 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const batchAddAssessments = async (assessments: Omit<Assessment, 'id'>[]) => {
-    for (const assessment of assessments) {
-      await performWrite('assessments', 'CREATE', assessment);
-    }
+    // Optimized batch add
+    const writes = assessments.map(assessment => performWrite('assessments', 'CREATE', assessment));
+    await Promise.all(writes);
   };
 
   const updateAssessment = async (id: string, updates: Partial<Assessment>) => {
