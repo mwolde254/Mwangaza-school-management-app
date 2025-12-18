@@ -3,7 +3,8 @@ export enum UserRole {
   ADMIN = 'ADMIN',
   PRINCIPAL = 'PRINCIPAL',
   TEACHER = 'TEACHER',
-  PARENT = 'PARENT'
+  PARENT = 'PARENT',
+  SUPER_ADMIN = 'SUPER_ADMIN'
 }
 
 export interface LeaveBalance {
@@ -23,6 +24,35 @@ export interface UserProfile {
   linkedStudentIds?: string[]; // For parents
   leaveBalances?: LeaveBalance; // New for staff
   totalPoints?: number;
+  schoolId?: string; // Tenant ID for multi-tenancy
+}
+
+// --- SUPER ADMIN / SAAS TYPES ---
+
+export type BillingStatus = 'ACTIVE' | 'TRIAL' | 'PENDING_PAYMENT' | 'SUSPENDED';
+
+export interface SchoolTenant {
+  id: string;
+  name: string;
+  slug: string; // URL identifier
+  logoUrl: string;
+  studentCount: number;
+  status: BillingStatus;
+  joinedDate: string;
+  expiryDate: string;
+  plan: 'BASIC' | 'PRO' | 'ENTERPRISE';
+  contactPerson: string;
+  contactEmail: string;
+  enabledModules: string[]; // e.g. ['TRANSPORT', 'FINANCE', 'ACADEMICS']
+}
+
+export interface GlobalSmsLog {
+  id: string;
+  schoolId: string;
+  schoolName: string;
+  count: number;
+  cost: number;
+  date: string;
 }
 
 // --- HR & STAFF TYPES ---
@@ -49,6 +79,7 @@ export interface SystemConfig {
   currentTerm: string;
   lastModifiedBy: string;
   lastModifiedDate: string;
+  maintenanceMode?: boolean;
 }
 
 export interface SystemHealth {
@@ -56,6 +87,8 @@ export interface SystemHealth {
   financeApiStatus: 'ACTIVE' | 'INACTIVE' | 'ERROR';
   missingTimetableEntries: number;
   lastBackup: string;
+  uptime: string;
+  apiLatency: string;
 }
 
 export interface Student {
@@ -114,11 +147,12 @@ export interface FinanceTransaction {
   studentId: string;
   studentName: string;
   amount: number;
-  type: 'TUITION' | 'LUNCH' | 'TRANSPORT' | 'UNIFORM' | 'TRIP' | 'EVENT';
+  type: 'TUITION' | 'LUNCH' | 'TRANSPORT' | 'UNIFORM' | 'TRIP' | 'EVENT' | 'LICENSE_FEE';
   date: string;
   status: 'PAID' | 'PENDING';
   method: 'MPESA' | 'BANK' | 'CASH' | 'CARD';
   reference?: string;
+  schoolId?: string; // For SaaS level ledger
 }
 
 export interface FeeStructure {
@@ -258,6 +292,8 @@ export interface SupportTicket {
   createdAt: string;
   updatedAt: string;
   messages: TicketMessage[];
+  schoolId?: string; // For super-admin oversight
+  isEscalated?: boolean;
 }
 
 // --- ADMISSIONS TYPES ---

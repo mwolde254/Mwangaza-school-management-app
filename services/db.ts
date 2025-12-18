@@ -1,5 +1,5 @@
 
-import { Student, FinanceTransaction, AttendanceRecord, LeaveRequest, Competency, UserProfile, UserRole, Assessment, AttendanceStatus, StudentNote, SchoolEvent, EventConsent, TimetableSlot, SupportTicket, AdmissionApplication, SmsTemplate, TransportRoute, TransportVehicle, TransportLog, StaffRecord, SystemConfig, SystemHealth, PointLog } from '../types';
+import { Student, FinanceTransaction, AttendanceRecord, LeaveRequest, Competency, UserProfile, UserRole, Assessment, AttendanceStatus, StudentNote, SchoolEvent, EventConsent, TimetableSlot, SupportTicket, AdmissionApplication, SmsTemplate, TransportRoute, TransportVehicle, TransportLog, StaffRecord, SystemConfig, SystemHealth, PointLog, SchoolTenant } from '../types';
 
 // Simulating Firestore behavior with LocalStorage and Async delays
 const DELAY = 500;
@@ -39,12 +39,21 @@ export const OfflineDB = {
 // Initial Data
 const MOCK_USERS: UserProfile[] = [
   { 
+    id: 'u0', 
+    name: 'Morgan Wolde', 
+    email: 'morgan@mwangaza.co.ke', 
+    role: UserRole.SUPER_ADMIN, 
+    status: 'ACTIVE', 
+    avatarUrl: 'https://ui-avatars.com/api/?name=Morgan+Wolde&background=1E3A8A&color=fff',
+  },
+  { 
     id: 'u1', 
     name: 'Principal Admin', 
     email: 'admin@school.com', 
     role: UserRole.PRINCIPAL, 
     status: 'ACTIVE', 
     avatarUrl: 'https://ui-avatars.com/api/?name=Principal+Admin&background=1E3A8A&color=fff',
+    schoolId: 'sch1',
     leaveBalances: {
       annual: { total: 21, used: 5 },
       sick: { total: 14, used: 0 },
@@ -59,6 +68,7 @@ const MOCK_USERS: UserProfile[] = [
     role: UserRole.TEACHER, 
     status: 'ACTIVE', 
     avatarUrl: 'https://ui-avatars.com/api/?name=Sarah+Johnson&background=059669&color=fff',
+    schoolId: 'sch1',
     leaveBalances: {
       annual: { total: 21, used: 12 },
       sick: { total: 14, used: 2 },
@@ -72,6 +82,7 @@ const MOCK_USERS: UserProfile[] = [
     email: 'parent@school.com', 
     role: UserRole.PARENT, 
     status: 'ACTIVE', 
+    schoolId: 'sch1',
     linkedStudentIds: ['st1'], 
     avatarUrl: 'https://ui-avatars.com/api/?name=David+Kamau&background=FCD34D&color=1E3A8A' 
   },
@@ -81,6 +92,7 @@ const MOCK_USERS: UserProfile[] = [
     email: 'john@school.com', 
     role: UserRole.TEACHER, 
     status: 'ACTIVE', 
+    schoolId: 'sch1',
     avatarUrl: 'https://ui-avatars.com/api/?name=John+Maina&background=111827&color=fff',
     leaveBalances: {
       annual: { total: 21, used: 0 },
@@ -95,8 +107,36 @@ const MOCK_USERS: UserProfile[] = [
     email: 'sysadmin@school.com', 
     role: UserRole.ADMIN, 
     status: 'ACTIVE', 
+    schoolId: 'sch1',
     avatarUrl: 'https://ui-avatars.com/api/?name=System+Admin&background=000&color=fff',
   }
+];
+
+// --- SUPER ADMIN MOCK DATA ---
+const MOCK_SCHOOLS: SchoolTenant[] = [
+  { id: 'sch1', name: 'Mwangaza Primary School', slug: 'mwangaza-primary', logoUrl: 'https://ui-avatars.com/api/?name=MP&background=1E3A8A&color=fff', studentCount: 150, status: 'ACTIVE', joinedDate: '2023-01-10', expiryDate: '2024-12-31', plan: 'PRO', contactPerson: 'Mrs. Mwangi', contactEmail: 'principal@mwangaza.co.ke', enabledModules: ['TRANSPORT', 'FINANCE', 'ACADEMICS'] },
+  { id: 'sch2', name: 'St. Peters Academy', slug: 'st-peters', logoUrl: 'https://ui-avatars.com/api/?name=SP&background=059669&color=fff', studentCount: 420, status: 'PENDING_PAYMENT', joinedDate: '2023-05-15', expiryDate: '2023-11-01', plan: 'BASIC', contactPerson: 'Mr. Omondi', contactEmail: 'admin@stpeters.ac.ke', enabledModules: ['FINANCE', 'ACADEMICS'] },
+  { id: 'sch3', name: 'Nairobi Hill School', slug: 'nairobi-hill', logoUrl: 'https://ui-avatars.com/api/?name=NH&background=FCD34D&color=1E3A8A', studentCount: 85, status: 'TRIAL', joinedDate: '2023-10-20', expiryDate: '2023-11-20', plan: 'BASIC', contactPerson: 'Dr. Hassan', contactEmail: 'info@nairobihill.co.ke', enabledModules: ['ACADEMICS'] },
+  { id: 'sch4', name: 'Westlands View School', slug: 'westlands-view', logoUrl: 'https://ui-avatars.com/api/?name=WV&background=EF4444&color=fff', studentCount: 210, status: 'SUSPENDED', joinedDate: '2022-09-01', expiryDate: '2023-08-31', plan: 'PRO', contactPerson: 'Mary Njeri', contactEmail: 'mary@westview.com', enabledModules: ['TRANSPORT', 'FINANCE', 'ACADEMICS'] },
+];
+
+const MOCK_GLOBAL_TICKETS: SupportTicket[] = [
+    { 
+        id: 'gt1', 
+        source: 'STAFF', 
+        requestorId: 'u1', 
+        requestorName: 'Mrs. Mwangi', 
+        requestorRole: UserRole.PRINCIPAL, 
+        category: 'FEES', 
+        subject: 'M-Pesa IPN callback failing', 
+        status: 'OPEN', 
+        priority: 'CRITICAL', 
+        createdAt: '2023-10-26T09:00:00Z', 
+        updatedAt: '2023-10-26T09:00:00Z', 
+        messages: [{ id: 'm1', senderId: 'u1', senderName: 'Mrs. Mwangi', role: 'PRINCIPAL', message: 'Payments made via Paybill are not showing up in our dashboard since this morning.', timestamp: '2023-10-26T09:00:00Z' }], 
+        schoolId: 'sch1', 
+        isEscalated: true 
+    }
 ];
 
 // --- HR MOCK DATA ---
@@ -112,14 +152,17 @@ const MOCK_SYSTEM_CONFIG: SystemConfig = {
   academicYear: '2023',
   currentTerm: 'Term 3',
   lastModifiedBy: 'System Administrator',
-  lastModifiedDate: '2023-09-01T10:00:00Z'
+  lastModifiedDate: '2023-09-01T10:00:00Z',
+  maintenanceMode: false
 };
 
 const MOCK_DATA_HEALTH: SystemHealth = {
   unlinkedStudents: 2,
   financeApiStatus: 'ACTIVE',
   missingTimetableEntries: 5,
-  lastBackup: '2023-10-26T02:00:00Z'
+  lastBackup: '2023-10-26T02:00:00Z',
+  uptime: '99.98%',
+  apiLatency: '45ms'
 };
 
 const MOCK_STUDENTS: Student[] = [
@@ -146,6 +189,7 @@ const MOCK_ASSESSMENTS: Assessment[] = [
 const MOCK_TRANSACTIONS: FinanceTransaction[] = [
   { id: 'tx1', studentId: 'st2', studentName: 'Jabari Ochieng', amount: 15000, type: 'TUITION', date: '2023-10-01', status: 'PAID', method: 'MPESA' },
   { id: 'tx2', studentId: 'st1', studentName: 'Zuri Kamau', amount: 5000, type: 'LUNCH', date: '2023-10-02', status: 'PAID', method: 'CASH' },
+  { id: 'tx3', studentId: 'sch1', studentName: 'Mwangaza Primary', amount: 22500, type: 'LICENSE_FEE', date: '2023-10-20', status: 'PAID', method: 'BANK', schoolId: 'sch1' },
 ];
 
 const MOCK_LEAVE_REQUESTS: LeaveRequest[] = [
@@ -400,7 +444,7 @@ export const db = {
       if (path === 'events') return getCollection<SchoolEvent>('events', MOCK_EVENTS);
       if (path === 'consents') return getCollection<EventConsent>('consents', MOCK_CONSENTS);
       if (path === 'timetable') return getCollection<TimetableSlot>('timetable', MOCK_TIMETABLE);
-      if (path === 'support_tickets') return getCollection<SupportTicket>('support_tickets', MOCK_TICKETS);
+      if (path === 'support_tickets') return getCollection<SupportTicket>('support_tickets', [...MOCK_TICKETS, ...MOCK_GLOBAL_TICKETS]);
       if (path === 'admissions_applications') return getCollection<AdmissionApplication>('admissions_applications', MOCK_APPLICATIONS);
       if (path === 'communication_templates') return getCollection<SmsTemplate>('communication_templates', MOCK_TEMPLATES);
       if (path === 'transport_routes') return getCollection<TransportRoute>('transport_routes', MOCK_TRANSPORT_ROUTES);
@@ -409,6 +453,7 @@ export const db = {
       if (path === 'staff') return getCollection<StaffRecord>('staff', MOCK_STAFF);
       if (path === 'points') return getCollection<PointLog>('points', MOCK_POINTS);
       if (path === 'invites') return getCollection('invites', []); // Ensure invites collection exists
+      if (path === 'schools') return getCollection<SchoolTenant>('schools', MOCK_SCHOOLS);
       return [];
     },
     // Special getter for single config docs
@@ -418,35 +463,10 @@ export const db = {
     },
     add: async (data: any) => {
       await new Promise(r => setTimeout(r, DELAY));
-      // Removed redirection logic to prevent duplicate user creation when adding invites
-      const collectionKey = path;
-      
-      const defaultData = path === 'students' ? MOCK_STUDENTS : 
-                          path === 'users' ? MOCK_USERS : 
-                          path === 'finance' ? MOCK_TRANSACTIONS :
-                          path === 'attendance' ? MOCK_ATTENDANCE :
-                          path === 'competencies' ? MOCK_COMPETENCIES : 
-                          path === 'notifications' ? MOCK_NOTIFICATIONS : 
-                          path === 'student_notes' ? MOCK_NOTES : 
-                          path === 'events' ? MOCK_EVENTS :
-                          path === 'leave_requests' ? MOCK_LEAVE_REQUESTS :
-                          path === 'consents' ? MOCK_CONSENTS : 
-                          path === 'timetable' ? MOCK_TIMETABLE : 
-                          path === 'support_tickets' ? MOCK_TICKETS : 
-                          path === 'admissions_applications' ? MOCK_APPLICATIONS : 
-                          path === 'communication_templates' ? MOCK_TEMPLATES : 
-                          path === 'transport_routes' ? MOCK_TRANSPORT_ROUTES :
-                          path === 'transport_vehicles' ? MOCK_TRANSPORT_VEHICLES :
-                          path === 'transport_logs' ? MOCK_TRANSPORT_LOGS : 
-                          path === 'staff' ? MOCK_STAFF : 
-                          path === 'points' ? MOCK_POINTS : 
-                          path === 'invites' ? [] : [];
-
-      const list = getCollection(collectionKey, defaultData as any[]);
-      
+      const list = getCollection(path, []);
       const newItem = { ...data, id: Math.random().toString(36).substr(2, 9) };
       list.push(newItem);
-      setCollection(collectionKey, list);
+      setCollection(path, list);
       return newItem;
     },
     update: async (id: string, updates: any) => {
@@ -485,7 +505,7 @@ export const db = {
     else if (path === 'consents') defaultData = MOCK_CONSENTS;
     else if (path === 'leave_requests') defaultData = MOCK_LEAVE_REQUESTS;
     else if (path === 'timetable') defaultData = MOCK_TIMETABLE;
-    else if (path === 'support_tickets') defaultData = MOCK_TICKETS;
+    else if (path === 'support_tickets') defaultData = [...MOCK_TICKETS, ...MOCK_GLOBAL_TICKETS];
     else if (path === 'admissions_applications') defaultData = MOCK_APPLICATIONS;
     else if (path === 'communication_templates') defaultData = MOCK_TEMPLATES;
     else if (path === 'transport_routes') defaultData = MOCK_TRANSPORT_ROUTES;
@@ -493,6 +513,7 @@ export const db = {
     else if (path === 'transport_logs') defaultData = MOCK_TRANSPORT_LOGS;
     else if (path === 'staff') defaultData = MOCK_STAFF;
     else if (path === 'points') defaultData = MOCK_POINTS;
+    else if (path === 'schools') defaultData = MOCK_SCHOOLS;
     
     // Initial fetch
     const data = getCollection(path, defaultData);

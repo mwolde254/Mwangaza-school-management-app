@@ -47,7 +47,7 @@ const AdminPortal: React.FC = () => {
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
 
   // -- TRANSPORT STATE --
-  const [transportMode, setTransportMode] = useState<'LIVE' | 'ROUTES' | 'LOGS'>('LIVE');
+  const [transportMode, setTransportMode] = useState<'ROUTES' | 'LOGS'>('ROUTES');
   const [showAddRouteModal, setShowAddRouteModal] = useState(false);
   const [routeName, setRouteName] = useState('');
   const [routeDriver, setRouteDriver] = useState('');
@@ -557,57 +557,9 @@ const AdminPortal: React.FC = () => {
       {activeTab === 'TRANSPORT' && (
           <div className="space-y-6 animate-slide-up">
               <div className="flex gap-4 border-b border-gray-200 pb-1">
-                  <button onClick={() => setTransportMode('LIVE')} className={`px-4 py-2 font-bold text-sm border-b-2 transition-colors ${transportMode === 'LIVE' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Live Monitor</button>
                   <button onClick={() => setTransportMode('ROUTES')} className={`px-4 py-2 font-bold text-sm border-b-2 transition-colors ${transportMode === 'ROUTES' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Route Manager</button>
                   <button onClick={() => setTransportMode('LOGS')} className={`px-4 py-2 font-bold text-sm border-b-2 transition-colors ${transportMode === 'LOGS' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Trip Logs</button>
               </div>
-
-              {transportMode === 'LIVE' && (
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
-                      <div className="lg:col-span-2 bg-gray-100 rounded-xl border border-gray-200 relative overflow-hidden flex items-center justify-center">
-                          {/* Mock Map */}
-                          <div className="absolute inset-0 bg-[url('https://upload.wikimedia.org/wikipedia/commons/e/ec/OpenStreetMap_Mapnik_logo.svg')] bg-cover opacity-20 grayscale"></div>
-                          <div className="relative z-10 w-full h-full p-4">
-                              {transportVehicles.map(v => {
-                                  const route = transportRoutes.find(r => r.id === v.routeId);
-                                  return (
-                                      <div 
-                                          key={v.id} 
-                                          className="absolute w-8 h-8 bg-brand-blue text-white rounded-full flex items-center justify-center shadow-xl border-2 border-white transition-all duration-1000 ease-linear"
-                                          style={{ top: `${v.currentLocation.y}%`, left: `${v.currentLocation.x}%` }}
-                                          title={`${route?.name} - ${v.speed} km/h`}
-                                      >
-                                          <Bus size={14}/>
-                                      </div>
-                                  );
-                              })}
-                          </div>
-                      </div>
-                      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 overflow-y-auto">
-                          <h3 className="font-bold text-gray-800 mb-4">Active Fleet</h3>
-                          <div className="space-y-3">
-                              {transportVehicles.map(v => {
-                                  const route = transportRoutes.find(r => r.id === v.routeId);
-                                  return (
-                                      <div key={v.id} className="p-3 border border-gray-100 rounded-lg hover:shadow-sm transition-shadow">
-                                          <div className="flex justify-between items-center mb-1">
-                                              <span className="font-bold text-sm text-gray-800">{route?.name}</span>
-                                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${v.status === 'ON_ROUTE' ? 'bg-brand-green/10 text-brand-green' : 'bg-brand-yellow/10 text-brand-yellow'}`}>{v.status}</span>
-                                          </div>
-                                          <div className="flex justify-between text-xs text-gray-500">
-                                              <span>{route?.vehicleNumber}</span>
-                                              <span>{v.speed} km/h</span>
-                                          </div>
-                                          <div className="mt-2 text-xs font-medium text-brand-blue flex items-center gap-1">
-                                              <MapPin size={10}/> Next: {v.nextStop} ({v.etaToNextStop})
-                                          </div>
-                                      </div>
-                                  );
-                              })}
-                          </div>
-                      </div>
-                  </div>
-              )}
 
               {transportMode === 'ROUTES' && (
                   <div className="space-y-6">

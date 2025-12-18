@@ -20,6 +20,9 @@ const LoginView: React.FC<LoginViewProps> = ({ role, onBack }) => {
   // Pre-fill email for demo purposes based on role
   useEffect(() => {
     switch (role) {
+      case UserRole.SUPER_ADMIN:
+        setEmail('morgan@mwangaza.co.ke');
+        break;
       case UserRole.ADMIN:
       case UserRole.PRINCIPAL:
         setEmail('admin@school.com');
@@ -77,6 +80,7 @@ const LoginView: React.FC<LoginViewProps> = ({ role, onBack }) => {
   const inputClass = `w-full h-12 pl-12 pr-4 bg-gray-50 rounded-[6px] border focus:bg-white outline-none transition-all font-medium ${error ? 'border-brand-red focus:border-brand-red focus:ring-2 focus:ring-brand-red/20' : 'border-gray-200 focus:border-brand-sky focus:ring-2 focus:ring-brand-sky/20'}`;
   
   const roleLabels: Record<UserRole, string> = {
+    [UserRole.SUPER_ADMIN]: 'Platform Owner',
     [UserRole.ADMIN]: 'System Admin',
     [UserRole.PRINCIPAL]: 'School Principal',
     [UserRole.TEACHER]: 'Class Teacher',

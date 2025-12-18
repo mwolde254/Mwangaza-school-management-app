@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Gavel, BookOpen, Home, ChevronLeft, LogIn, UserPlus, Settings, Sparkles, CheckCircle2, TrendingUp, Shield, MessageCircle, Menu, X, ArrowRight, Quote, Phone, Mail, LayoutDashboard, Smartphone, Check, ChevronDown, Terminal, Calendar as CalendarIcon, MapPin, Wallet, Bus, Clock, Heart, Star, Users } from 'lucide-react';
+import { Gavel, BookOpen, Home, ChevronLeft, LogIn, UserPlus, Settings, Sparkles, CheckCircle2, TrendingUp, Shield, MessageCircle, Menu, X, ArrowRight, Quote, Phone, Mail, LayoutDashboard, Smartphone, Check, ChevronDown, Terminal, Calendar as CalendarIcon, MapPin, Wallet, Bus, Clock, Heart, Star, Users, ShieldCheck } from 'lucide-react';
 import { UserRole } from '../types';
 import AdmissionsWizard from '../components/AdmissionsWizard';
 import { db } from '../services/db';
@@ -165,7 +165,8 @@ const LoginSelectionModal = ({ isOpen, onClose, onSelect, onSignup }: { isOpen: 
     { id: UserRole.ADMIN, title: 'System Admin', icon: Settings, color: 'text-brand-blue', desc: 'Configuration' },
     { id: UserRole.PRINCIPAL, title: 'Principal', icon: Gavel, color: 'text-brand-blue', desc: 'Management' },
     { id: UserRole.TEACHER, title: 'Teacher', icon: BookOpen, color: 'text-brand-green', desc: 'Classroom' },
-    { id: UserRole.PARENT, title: 'Parent', icon: Home, color: 'text-brand-sky', desc: 'Family' }
+    { id: UserRole.PARENT, title: 'Parent', icon: Home, color: 'text-brand-sky', desc: 'Family' },
+    { id: UserRole.SUPER_ADMIN, title: 'Platform Owner', icon: ShieldCheck, color: 'text-brand-blue', desc: 'SaaS Control' }
   ];
 
   return (
@@ -589,27 +590,10 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
          <div className="max-w-7xl mx-auto px-6 relative z-10">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-500 text-xs font-bold shadow-sm mb-6">
-                     <Home size={14} /> Established 2010
-                  </div>
                   <h2 className="font-display font-extrabold text-4xl text-gray-900 mb-6">Our Team</h2>
                   <p className="text-gray-600 text-lg leading-relaxed mb-6">
                      Mwangaza was founded with a simple mission: to bridge the gap between traditional education and the digital future. We believe in holistic learning that respects the Kenyan competency-based curriculum while leveraging cutting-edge technology.
                   </p>
-                  <p className="text-gray-600 text-lg leading-relaxed mb-8">
-                     Our campus in Westlands is a hub of innovation, creativity, and academic excellence, fostering a safe environment for over 500 students to explore, learn, and grow.
-                  </p>
-                  
-                  <div className="grid grid-cols-2 gap-6">
-                     <div>
-                        <h4 className="font-bold text-3xl text-brand-blue mb-1">15+</h4>
-                        <p className="text-sm text-gray-500">Years of Excellence</p>
-                     </div>
-                     <div>
-                        <h4 className="font-bold text-3xl text-brand-green mb-1">40+</h4>
-                        <p className="text-sm text-gray-500">Certified Teachers</p>
-                     </div>
-                  </div>
                </div>
 
                {/* Team Grid */}
@@ -700,6 +684,9 @@ const LandingView: React.FC<LandingViewProps> = ({ onLoginSelect, onSignupSelect
                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Dev Quick Login</span>
               </div>
               <div className="flex flex-col gap-2">
+                 <button onClick={() => onDevLogin(UserRole.SUPER_ADMIN)} className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-brand-blue/5 hover:text-brand-blue rounded-lg transition-colors">
+                    SaaS Owner
+                 </button>
                  <button onClick={() => onDevLogin(UserRole.ADMIN)} className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-brand-blue/5 hover:text-brand-blue rounded-lg transition-colors">
                     Admin
                  </button>

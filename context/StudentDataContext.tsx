@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Student, AttendanceRecord, FinanceTransaction, LeaveRequest, Competency, Assessment, StudentNote, UserProfile, UserRole, SchoolEvent, EventConsent, TimetableSlot, SupportTicket, AdmissionApplication, AdmissionStage, SmsTemplate, TransportRoute, TransportVehicle, TransportLog, StaffRecord, SystemConfig, SystemHealth, FeeStructure, ClassStream, SyllabusTopic, TicketMessage } from '../types';
+import { Student, AttendanceRecord, FinanceTransaction, LeaveRequest, Competency, Assessment, StudentNote, UserProfile, UserRole, SchoolEvent, EventConsent, TimetableSlot, SupportTicket, AdmissionApplication, AdmissionStage, SmsTemplate, TransportRoute, TransportVehicle, TransportLog, StaffRecord, SystemConfig, SystemHealth, FeeStructure, ClassStream, SyllabusTopic, TicketMessage, SchoolTenant } from '../types';
 import { db, AppNotification, OfflineDB, SyncItem } from '../services/db';
 
 interface RegisterStudentPayload {
@@ -49,6 +49,7 @@ interface DataContextType {
   staffRecords: StaffRecord[];
   systemConfig: SystemConfig | null;
   systemHealth: SystemHealth | null;
+  schools: SchoolTenant[];
   
   // Status
   loading: boolean;
@@ -94,6 +95,7 @@ interface DataContextType {
   addTransportRoute: (route: Omit<TransportRoute, 'id'>) => Promise<void>;
   addStaffRecord: (staff: Omit<StaffRecord, 'id'>) => Promise<void>;
   updateStaffRecord: (id: string, updates: Partial<StaffRecord>) => Promise<void>;
+  updateSchool: (id: string, updates: Partial<SchoolTenant>) => Promise<void>;
   refresh: () => void;
 }
 
@@ -200,6 +202,7 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [staffRecords, setStaffRecords] = useState<StaffRecord[]>([]);
   const [systemConfig, setSystemConfig] = useState<SystemConfig | null>(null);
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
+  const [schools, setSchools] = useState<SchoolTenant[]>([]);
   
   // Status
   const [loading, setLoading] = useState(true);
@@ -329,7 +332,8 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
       db.onSnapshot('competencies', setCompetencies),
       db.onSnapshot('fee_structures', setFeeStructures),
       db.onSnapshot('streams', setStreams),
-      db.onSnapshot('syllabus', setSyllabus)
+      db.onSnapshot('syllabus', setSyllabus),
+      db.onSnapshot('schools', setSchools)
     ];
     
     // Transport Sim
@@ -670,15 +674,19 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
     await performWrite('staff', 'UPDATE', updates, id);
   };
 
+  const updateSchool = async (id: string, updates: Partial<SchoolTenant>) => {
+    await performWrite('schools', 'UPDATE', updates, id);
+  };
+
   const connectionState = isSyncing ? 'SYNCING' : (isOnline ? 'ONLINE' : 'OFFLINE');
 
   return (
     <StudentDataContext.Provider value={{ 
-      students, transactions, feeStructures, streams, syllabus, leaveRequests, attendance, competencies, assessments, notifications, studentNotes, users, events, consents, timetable, supportTickets, applications, smsTemplates, transportRoutes, transportVehicles, transportLogs, staffRecords, systemConfig, systemHealth,
+      students, transactions, feeStructures, streams, syllabus, leaveRequests, attendance, competencies, assessments, notifications, studentNotes, users, events, consents, timetable, supportTickets, applications, smsTemplates, transportRoutes, transportVehicles, transportLogs, staffRecords, systemConfig, systemHealth, schools,
       loading, 
       connectionStatus: connectionState,
       pendingChanges,
-      addStudent, registerStudent, bulkCreateStudents, addTransaction, addFeeStructure, addStream, addSyllabusTopic, updateSyllabusStatus, updateLeaveRequest, submitAttendance, addAssessment, batchAddAssessments, updateAssessment, addStudentNote, markNotificationRead, updateUser, addEvent, updateEvent, deleteEvent, submitConsent, submitLeaveRequest, resolveLeaveRequest, addTimetableSlot, deleteTimetableSlot, checkTimetableConflict, addSupportTicket, replyToTicket, updateTicket, resolveSupportTicket, submitApplication, updateApplicationStage, enrollApplicant, addSmsTemplate, updateSmsTemplate, deleteSmsTemplate, addTransportRoute, addStaffRecord, updateStaffRecord,
+      addStudent, registerStudent, bulkCreateStudents, addTransaction, addFeeStructure, addStream, addSyllabusTopic, updateSyllabusStatus, updateLeaveRequest, submitAttendance, addAssessment, batchAddAssessments, updateAssessment, addStudentNote, markNotificationRead, updateUser, addEvent, updateEvent, deleteEvent, submitConsent, submitLeaveRequest, resolveLeaveRequest, addTimetableSlot, deleteTimetableSlot, checkTimetableConflict, addSupportTicket, replyToTicket, updateTicket, resolveSupportTicket, submitApplication, updateApplicationStage, enrollApplicant, addSmsTemplate, updateSmsTemplate, deleteSmsTemplate, addTransportRoute, addStaffRecord, updateStaffRecord, updateSchool,
       refresh: fetchData
     }}>
       {children}

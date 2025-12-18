@@ -7,6 +7,7 @@ import Layout from './components/Layout';
 import AdminPortal from './views/AdminPortal';
 import TeacherPortal from './views/TeacherPortal';
 import ParentPortal from './views/ParentPortal';
+import SuperAdminPortal from './views/SuperAdminPortal';
 import LoginView from './views/LoginView';
 import LandingView from './views/LandingView';
 import SettingsView from './views/SettingsView';
@@ -48,6 +49,7 @@ const AuthenticatedApp: React.FC = () => {
   const handleDevLogin = async (role: UserRole) => {
     let email = '';
     switch(role) {
+      case UserRole.SUPER_ADMIN: email = 'morgan@mwangaza.co.ke'; break;
       case UserRole.ADMIN: email = 'sysadmin@school.com'; break;
       case UserRole.PRINCIPAL: email = 'admin@school.com'; break;
       case UserRole.TEACHER: email = 'teacher@school.com'; break;
@@ -117,6 +119,8 @@ const AuthenticatedApp: React.FC = () => {
 
     // Role-based Dashboards
     switch (user.role) {
+      case UserRole.SUPER_ADMIN:
+        return <SuperAdminPortal />;
       case UserRole.ADMIN:
       case UserRole.PRINCIPAL:
         return <AdminPortal />;
